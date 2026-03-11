@@ -191,7 +191,7 @@ textarea.main-input:focus { border-color: var(--accent); }
 <div class="container">
 <header>
   <div class="logo-tag">ACG EVENT TRACKER</div>
-  <h1>ACG活動輸入</h1>
+  <h1>活動快速錄入</h1>
   <p class="subtitle">// 文字或圖片 → AI 解析 → Google Sheet</p>
   <a class="sheet-link" href="https://docs.google.com/spreadsheets/d/1cM_zw6RLAJWzBQnBwFAdKCFfp6n9oYEt051McrabfZg/edit" target="_blank">📊 開啟 Google Sheet ↗</a>
 </header>
@@ -240,7 +240,7 @@ textarea.main-input:focus { border-color: var(--accent); }
 
 <script>
 const WORKER_URL = 'https://patient-snowflake-50b3acg.ionachen.workers.dev/';
-const HARDCODED_KEY = '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';
+const HARDCODED_KEY = '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';
 const HARDCODED_WEBHOOK = 'https://script.google.com/macros/s/AKfycbxfFnDo0JMNDsMgHvOQKTWyrCpfD5xHCLiXNvBjMbyLCyMkzg280OSw_g-nFjGdoZcr/exec';
 
 const FIELDS = [
@@ -346,7 +346,7 @@ async function parseEvents() {
   try {
     const resp = await fetch(WORKER_URL, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey, model: 'claude-sonnet-4-20250514', max_tokens: 2000, system: SYSTEM_PROMPT, messages })
+      body: JSON.stringify({ apiKey, model: 'claude-sonnet-4-5', max_tokens: 2000, system: SYSTEM_PROMPT, messages })
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error?.message || 'API 錯誤：' + JSON.stringify(data));

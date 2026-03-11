@@ -2,541 +2,319 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>ACG 活動快速錄入</title>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0a0a0f;
-    --surface: #12121a;
-    --card: #1a1a26;
-    --border: #2a2a40;
-    --accent: #7c3aed;
-    --accent2: #06b6d4;
-    --accent3: #f59e0b;
-    --text: #e2e8f0;
-    --muted: #64748b;
-    --success: #10b981;
-    --error: #ef4444;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'Zen Kaku Gothic New', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    padding: 24px 16px 60px;
-  }
-
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124,58,237,0.15), transparent),
-                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(6,182,212,0.08), transparent);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .container { max-width: 720px; margin: 0 auto; position: relative; z-index: 1; }
-
-  header {
-    text-align: center;
-    margin-bottom: 36px;
-    padding-top: 16px;
-  }
-
-  .logo-tag {
-    display: inline-block;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
-    color: var(--accent2);
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    border: 1px solid var(--accent2);
-    padding: 4px 12px;
-    margin-bottom: 16px;
-    opacity: 0.8;
-  }
-
-  h1 {
-    font-size: clamp(26px, 5vw, 40px);
-    font-weight: 900;
-    line-height: 1.1;
-    background: linear-gradient(135deg, #fff 0%, var(--accent2) 50%, var(--accent) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 8px;
-  }
-
-  .subtitle {
-    color: var(--muted);
-    font-size: 14px;
-    font-family: 'Share Tech Mono', monospace;
-  }
-
-  /* Config section */
-  .config-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-  }
-
-  .config-card summary {
-    cursor: pointer;
-    font-size: 13px;
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    list-style: none;
-    user-select: none;
-  }
-  .config-card summary::before { content: '▶'; font-size: 10px; transition: transform 0.2s; }
-  .config-card[open] summary::before { transform: rotate(90deg); }
-  .config-card summary:hover { color: var(--text); }
-
-  .config-inner { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
-
-  label { font-size: 12px; color: var(--muted); font-family: 'Share Tech Mono', monospace; display: block; margin-bottom: 4px; }
-
-  input[type=text], input[type=password], textarea {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-    color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 13px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  input:focus, textarea:focus { border-color: var(--accent); }
-
-  /* Main input area */
-  .input-section {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 20px;
-  }
-
-  .tab-bar {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-  }
-
-  .tab {
-    padding: 8px 20px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted);
-    transition: all 0.2s;
-  }
-  .tab.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
-  .tab:hover:not(.active) { border-color: var(--accent); color: var(--text); }
-
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
-
-  textarea.main-input {
-    min-height: 160px;
-    resize: vertical;
-    font-size: 14px;
-    line-height: 1.6;
-    font-family: 'Zen Kaku Gothic New', sans-serif;
-  }
-
-  .drop-zone {
-    border: 2px dashed var(--border);
-    border-radius: 12px;
-    padding: 48px 24px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-  }
-  .drop-zone:hover, .drop-zone.dragover {
-    border-color: var(--accent);
-    background: rgba(124,58,237,0.05);
-  }
-  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .drop-icon { font-size: 40px; margin-bottom: 12px; }
-  .drop-text { color: var(--muted); font-size: 14px; }
-  .drop-text strong { color: var(--accent2); }
-  #preview-img { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 16px; display: none; }
-
-  .submit-btn {
-    width: 100%;
-    padding: 16px;
-    background: linear-gradient(135deg, var(--accent), #5b21b6);
-    border: none;
-    border-radius: 12px;
-    color: #fff;
-    font-family: 'Zen Kaku Gothic New', sans-serif;
-    font-size: 16px;
-    font-weight: 900;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 16px;
-    letter-spacing: 1px;
-  }
-  .submit-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(124,58,237,0.4);
-  }
-  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-  /* Status */
-  .status-bar {
-    display: none;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 18px;
-    border-radius: 10px;
-    font-size: 14px;
-    margin-top: 16px;
-  }
-  .status-bar.show { display: flex; }
-  .status-bar.loading { background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); color: var(--accent2); }
-  .status-bar.success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: var(--success); }
-  .status-bar.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--error); }
-
-  .spinner {
-    width: 18px; height: 18px;
-    border: 2px solid currentColor;
-    border-top-color: transparent;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    flex-shrink: 0;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Preview card */
-  .preview-section {
-    display: none;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    margin-top: 20px;
-  }
-  .preview-section.show { display: block; }
-
-  .preview-title {
-    font-size: 12px;
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--accent2);
-    letter-spacing: 2px;
-    margin-bottom: 16px;
-    text-transform: uppercase;
-  }
-
-  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 480px) { .field-grid { grid-template-columns: 1fr; } }
-
-  .field-item {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-  }
-  .field-item.full { grid-column: 1 / -1; }
-  .field-label { font-size: 11px; color: var(--muted); font-family: 'Share Tech Mono', monospace; margin-bottom: 4px; }
-  .field-value { font-size: 14px; color: var(--text); word-break: break-word; }
-  .field-value input {
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--border);
-    border-radius: 0;
-    padding: 2px 0;
-    font-size: 14px;
-    width: 100%;
-  }
-  .field-value input:focus { border-bottom-color: var(--accent); }
-
-  .action-row { display: flex; gap: 12px; margin-top: 20px; }
-
-  .btn-confirm {
-    flex: 1;
-    padding: 14px;
-    background: linear-gradient(135deg, var(--success), #059669);
-    border: none;
-    border-radius: 10px;
-    color: #fff;
-    font-family: 'Zen Kaku Gothic New', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-confirm:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.3); }
-  .btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-  .btn-cancel {
-    padding: 14px 24px;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--muted);
-    font-family: 'Zen Kaku Gothic New', sans-serif;
-    font-size: 15px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-cancel:hover { border-color: var(--error); color: var(--error); }
-
-  /* History */
-  .history-section { margin-top: 28px; }
-  .history-title {
-    font-size: 12px;
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--muted);
-    letter-spacing: 2px;
-    margin-bottom: 12px;
-    text-transform: uppercase;
-  }
-  .history-item {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .history-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
-  .history-dot.err { background: var(--error); }
-  .history-name { font-size: 14px; font-weight: 700; flex: 1; }
-  .history-time { font-size: 11px; color: var(--muted); font-family: 'Share Tech Mono', monospace; }
-
-  /* Sheet info */
-  .sheet-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--accent2);
-    text-decoration: none;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-    margin-top: 8px;
-  }
-  .sheet-link:hover { opacity: 1; }
+:root {
+  --bg: #0a0a0f; --surface: #12121a; --card: #1a1a26; --border: #2a2a40;
+  --accent: #7c3aed; --accent2: #06b6d4; --text: #e2e8f0; --muted: #64748b;
+  --success: #10b981; --error: #ef4444; --warn: #f59e0b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh; padding: 20px 14px 80px;
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124,58,237,0.12), transparent),
+              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(6,182,212,0.07), transparent);
+  pointer-events: none; z-index: 0;
+}
+.container { max-width: 720px; margin: 0 auto; position: relative; z-index: 1; }
+header { text-align: center; margin-bottom: 24px; padding-top: 10px; }
+.logo-tag {
+  display: inline-block; font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; color: var(--accent2); letter-spacing: 4px;
+  border: 1px solid var(--accent2); padding: 3px 10px; margin-bottom: 12px; opacity: 0.8;
+}
+h1 {
+  font-size: clamp(22px, 5vw, 36px); font-weight: 900;
+  background: linear-gradient(135deg, #fff 0%, var(--accent2) 50%, var(--accent) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-bottom: 5px;
+}
+.subtitle { color: var(--muted); font-size: 12px; font-family: 'Share Tech Mono', monospace; }
+.sheet-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-family: 'Share Tech Mono', monospace;
+  color: var(--accent2); text-decoration: none; opacity: 0.7; margin-top: 6px;
+}
+details.config-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px 18px; margin-bottom: 16px;
+}
+details.config-card summary {
+  cursor: pointer; font-size: 12px; font-family: 'Share Tech Mono', monospace;
+  color: var(--muted); list-style: none; user-select: none; display: flex; align-items: center; gap: 6px;
+}
+details.config-card summary::-webkit-details-marker { display: none; }
+details.config-card summary::before { content: '▶'; font-size: 9px; transition: transform 0.2s; }
+details.config-card[open] summary::before { transform: rotate(90deg); }
+.config-inner { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+label { font-size: 11px; color: var(--muted); font-family: 'Share Tech Mono', monospace; display: block; margin-bottom: 3px; }
+input[type=text], input[type=password] {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 12px; color: var(--text);
+  font-family: 'Share Tech Mono', monospace; font-size: 13px; outline: none; -webkit-appearance: none;
+}
+input:focus { border-color: var(--accent); }
+.save-btn {
+  padding: 9px 20px; background: var(--accent); border: none;
+  border-radius: 8px; color: #fff; font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.input-section {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px; margin-bottom: 16px;
+}
+.tab-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+.tab {
+  flex: 1; padding: 9px 10px; border-radius: 8px; font-size: 13px; font-weight: 700;
+  cursor: pointer; border: 1px solid var(--border); background: transparent;
+  color: var(--muted); transition: all 0.2s;
+}
+.tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+textarea.main-input {
+  width: 100%; min-height: 140px; resize: vertical;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px; color: var(--text);
+  font-size: 15px; line-height: 1.7; outline: none;
+  font-family: 'Zen Kaku Gothic New', sans-serif; -webkit-appearance: none;
+}
+textarea.main-input:focus { border-color: var(--accent); }
+.drop-zone {
+  border: 2px dashed var(--border); border-radius: 12px;
+  padding: 40px 20px; text-align: center; cursor: pointer;
+  transition: all 0.2s; position: relative;
+}
+.drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(124,58,237,0.05); }
+.drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.drop-icon { font-size: 36px; margin-bottom: 8px; }
+.drop-text { color: var(--muted); font-size: 14px; }
+.drop-text strong { color: var(--accent2); }
+#preview-img { max-width: 100%; max-height: 180px; border-radius: 8px; margin-top: 12px; display: none; }
+.parse-btn {
+  width: 100%; padding: 15px; margin-top: 14px;
+  background: linear-gradient(135deg, var(--accent), #5b21b6);
+  border: none; border-radius: 12px; color: #fff;
+  font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 16px; font-weight: 900;
+  cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.parse-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.status-bar {
+  display: none; align-items: center; gap: 10px;
+  padding: 12px 14px; border-radius: 9px; font-size: 14px; margin-top: 12px;
+}
+.status-bar.show { display: flex; }
+.status-bar.loading { background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); color: var(--accent2); }
+.status-bar.success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: var(--success); }
+.status-bar.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--error); }
+.status-bar.warn { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: var(--warn); }
+.spinner {
+  width: 15px; height: 15px; border: 2px solid currentColor;
+  border-top-color: transparent; border-radius: 50%;
+  animation: spin 0.8s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.events-section { display: none; margin-top: 18px; }
+.events-section.show { display: block; }
+.events-header {
+  font-size: 11px; font-family: 'Share Tech Mono', monospace;
+  color: var(--accent2); letter-spacing: 2px; margin-bottom: 12px;
+}
+.event-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px; margin-bottom: 12px;
+}
+.event-card.duplicate { border-color: var(--warn); }
+.duplicate-badge {
+  display: none; font-size: 11px; font-family: 'Share Tech Mono', monospace;
+  background: rgba(245,158,11,0.15); color: var(--warn);
+  border: 1px solid var(--warn); border-radius: 20px;
+  padding: 2px 10px; margin-bottom: 10px;
+}
+.event-card.duplicate .duplicate-badge { display: inline-block; }
+.event-card-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+}
+.event-num {
+  font-size: 11px; font-family: 'Share Tech Mono', monospace;
+  color: var(--accent); background: rgba(124,58,237,0.12); padding: 2px 10px; border-radius: 20px;
+}
+.event-remove {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted); border-radius: 6px; padding: 5px 12px;
+  font-size: 12px; cursor: pointer;
+}
+.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 480px) { .field-grid { grid-template-columns: 1fr; } }
+.field-item {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+}
+.field-item.full { grid-column: 1 / -1; }
+.field-label { font-size: 10px; color: var(--muted); font-family: 'Share Tech Mono', monospace; margin-bottom: 4px; }
+.field-value input, .field-value select {
+  width: 100%; background: transparent; border: none;
+  border-bottom: 1px solid var(--border); padding: 3px 0; color: var(--text);
+  font-size: 15px; font-family: 'Zen Kaku Gothic New', sans-serif; outline: none;
+  -webkit-appearance: none; border-radius: 0;
+}
+.field-value input:focus, .field-value select:focus { border-bottom-color: var(--accent); }
+.field-value select { background: var(--surface); }
+.field-value select option { background: var(--card); }
+.submit-all-btn {
+  width: 100%; padding: 15px; margin-top: 4px;
+  background: linear-gradient(135deg, var(--success), #059669);
+  border: none; border-radius: 12px; color: #fff;
+  font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 15px; font-weight: 900;
+  cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.submit-all-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.success-preview {
+  display: none; background: var(--card); border: 1px solid var(--success);
+  border-radius: 12px; padding: 16px; margin-top: 14px;
+}
+.success-preview.show { display: block; }
+.success-preview-title {
+  font-size: 11px; font-family: 'Share Tech Mono', monospace; color: var(--success); margin-bottom: 12px;
+}
+.success-item {
+  background: var(--surface); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+  font-size: 13px; display: flex; align-items: flex-start; gap: 10px;
+}
+.success-icon { color: var(--success); flex-shrink: 0; }
+.success-info { flex: 1; }
+.success-title { font-weight: 700; margin-bottom: 2px; }
+.success-meta { font-size: 11px; color: var(--muted); font-family: 'Share Tech Mono', monospace; }
+.history-section { margin-top: 22px; }
+.history-title { font-size: 11px; font-family: 'Share Tech Mono', monospace; color: var(--muted); margin-bottom: 10px; letter-spacing: 2px; }
+.history-item {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 11px 13px; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 10px;
+}
+.h-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+.h-dot.err { background: var(--error); }
+.h-name { font-size: 13px; font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.h-time { font-size: 11px; color: var(--muted); font-family: 'Share Tech Mono', monospace; flex-shrink: 0; }
 </style>
 </head>
 <body>
 <div class="container">
-  <header>
-    <div class="logo-tag">ACG EVENT TRACKER</div>
-    <h1>活動快速錄入</h1>
-    <p class="subtitle">// 貼上文字或上傳圖片 → AI 解析 → 自動寫入 Google Sheet</p>
-    <a class="sheet-link" href="https://docs.google.com/spreadsheets/d/1cM_zw6RLAJWzBQnBwFAdKCFfp6n9oYEt051McrabfZg/edit" target="_blank">
-      📊 開啟 Google Sheet ↗
-    </a>
-  </header>
+<header>
+  <div class="logo-tag">ACG EVENT TRACKER</div>
+  <h1>活動快速錄入</h1>
+  <p class="subtitle">// 文字或圖片 → AI 解析 → Google Sheet</p>
+  <a class="sheet-link" href="https://docs.google.com/spreadsheets/d/1cM_zw6RLAJWzBQnBwFAdKCFfp6n9oYEt051McrabfZg/edit" target="_blank">📊 開啟 Google Sheet ↗</a>
+</header>
 
-  <!-- Config -->
-  <details class="config-card" id="config-details">
-    <summary>⚙ 設定 API Keys</summary>
-    <div class="config-inner">
-      <div>
-        <label>ANTHROPIC API KEY（用於 AI 解析）</label>
-        <input type="password" id="anthropic-key" placeholder="sk-ant-..." />
-      </div>
-      <div>
-        <label>GOOGLE SERVICE ACCOUNT JSON（用於寫入 Sheet）</label>
-        <textarea id="google-creds" placeholder='{"type":"service_account","project_id":"..."}' style="min-height:80px;font-size:12px;"></textarea>
-        <div style="font-size:11px;color:var(--muted);margin-top:6px;">
-          ⚠️ 請至 <a href="https://console.cloud.google.com/iam-admin/serviceaccounts" target="_blank" style="color:var(--accent2)">Google Cloud Console</a> 建立 Service Account，並將其加入 Sheet 的編輯者。
-          <br>或直接使用下方的 Apps Script 方案（推薦）。
-        </div>
-      </div>
-      <div style="border-top:1px solid var(--border);padding-top:12px;">
-        <div style="font-size:12px;color:var(--accent3);margin-bottom:8px;font-family:'Share Tech Mono',monospace;">▸ 推薦方案：Google Apps Script Webhook</div>
-        <label>APPS SCRIPT WEBHOOK URL（最簡單！）</label>
-        <input type="text" id="webhook-url" placeholder="https://script.google.com/macros/s/.../exec" />
-        <div style="font-size:11px;color:var(--muted);margin-top:6px;">
-          📋 <a id="show-script" href="#" style="color:var(--accent2)">查看 Apps Script 程式碼</a>
-        </div>
-      </div>
-      <button onclick="saveConfig()" style="padding:8px 20px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:'Zen Kaku Gothic New',sans-serif;font-size:13px;cursor:pointer;">儲存設定</button>
-    </div>
-  </details>
+<details class="config-card" id="config-details">
+  <summary>⚙ 設定</summary>
+  <div class="config-inner">
+    <div><label>ANTHROPIC API KEY</label><input type="password" id="anthropic-key" placeholder="sk-ant-..."></div>
+    <div><label>APPS SCRIPT WEBHOOK URL</label><input type="text" id="webhook-url" placeholder="https://script.google.com/macros/s/.../exec"></div>
+    <button class="save-btn" onclick="saveConfig()">儲存設定</button>
+  </div>
+</details>
 
-  <!-- Script modal -->
-  <div id="script-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:100;padding:20px;overflow-y:auto;">
-    <div style="max-width:680px;margin:0 auto;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <div style="font-family:'Share Tech Mono',monospace;color:var(--accent2);font-size:13px;">APPS SCRIPT 程式碼</div>
-        <button onclick="document.getElementById('script-modal').style.display='none'" style="background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer;">✕</button>
-      </div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">
-        1. 開啟你的 Google Sheet → 點選「擴充功能」→「Apps Script」<br>
-        2. 貼上以下程式碼 → 儲存 → 部署為「網頁應用程式」(存取權：所有人)<br>
-        3. 複製部署後的 URL 貼回上方設定
-      </div>
-      <pre id="script-code" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;font-family:'Share Tech Mono',monospace;font-size:11px;overflow-x:auto;color:#a5f3fc;line-height:1.6;white-space:pre-wrap;"></pre>
-      <button onclick="copyScript()" style="margin-top:12px;padding:10px 24px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:'Zen Kaku Gothic New',sans-serif;font-size:13px;cursor:pointer;">📋 複製程式碼</button>
+<div class="input-section">
+  <div class="tab-bar">
+    <button class="tab active" onclick="switchTab('text',this)">📝 貼上文字</button>
+    <button class="tab" onclick="switchTab('image',this)">🖼 上傳圖片</button>
+  </div>
+  <div class="tab-content active" id="tab-text">
+    <textarea class="main-input" id="text-input" placeholder="貼上活動資訊文字…&#10;可包含多個活動，AI 會自動分開解析"></textarea>
+  </div>
+  <div class="tab-content" id="tab-image">
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" accept="image/*" onchange="handleFile(this.files[0])">
+      <div class="drop-icon">📎</div>
+      <div class="drop-text">點擊或拖曳圖片至此<br><strong>支援截圖、活動海報</strong></div>
+      <img id="preview-img" src="" alt="預覽">
     </div>
   </div>
-
-  <!-- Main Input -->
-  <div class="input-section">
-    <div class="tab-bar">
-      <button class="tab active" onclick="switchTab('text', this)">📝 貼上文字</button>
-      <button class="tab" onclick="switchTab('image', this)">🖼 上傳圖片</button>
-    </div>
-
-    <div class="tab-content active" id="tab-text">
-      <textarea class="main-input" id="text-input" placeholder="貼上活動資訊文字…
-例如：
-活動名稱、時間、地點、費用、主辦、連結等
-支援各種格式，AI 會自動解析"></textarea>
-    </div>
-
-    <div class="tab-content" id="tab-image">
-      <div class="drop-zone" id="drop-zone">
-        <input type="file" id="file-input" accept="image/*" onchange="handleFile(this.files[0])">
-        <div class="drop-icon">📎</div>
-        <div class="drop-text">點擊或拖曳圖片至此<br><strong>支援截圖、海報圖片</strong></div>
-        <img id="preview-img" src="" alt="預覽">
-      </div>
-    </div>
-
-    <button class="submit-btn" id="parse-btn" onclick="parseEvent()">
-      <span>✨</span> AI 解析活動資訊
-    </button>
-
-    <div class="status-bar" id="status-bar">
-      <div class="spinner" id="spinner" style="display:none"></div>
-      <span id="status-text"></span>
-    </div>
-  </div>
-
-  <!-- Preview & Edit -->
-  <div class="preview-section" id="preview-section">
-    <div class="preview-title">// 解析結果 — 請確認或修改後送出</div>
-    <div class="field-grid" id="field-grid"></div>
-    <div class="action-row">
-      <button class="btn-confirm" id="confirm-btn" onclick="submitToSheet()">✅ 確認寫入 Google Sheet</button>
-      <button class="btn-cancel" onclick="cancelPreview()">✕</button>
-    </div>
-    <div class="status-bar" id="submit-status"></div>
-  </div>
-
-  <!-- History -->
-  <div class="history-section" id="history-section" style="display:none">
-    <div class="history-title">// 本次已錄入</div>
-    <div id="history-list"></div>
+  <button class="parse-btn" id="parse-btn" onclick="parseEvents()"><span>✨</span> AI 解析活動資訊</button>
+  <div class="status-bar" id="status-bar">
+    <div class="spinner" id="spinner" style="display:none"></div>
+    <span id="status-text"></span>
   </div>
 </div>
 
+<div class="events-section" id="events-section">
+  <div class="events-header" id="events-header"></div>
+  <div id="events-list"></div>
+  <button class="submit-all-btn" id="submit-btn" onclick="submitAll()">✅ 確認全部寫入 Google Sheet</button>
+  <div class="status-bar" id="submit-status"></div>
+  <div class="success-preview" id="success-preview">
+    <div class="success-preview-title">// 已寫入以下活動</div>
+    <div id="success-list"></div>
+  </div>
+</div>
+
+<div class="history-section" id="history-section" style="display:none">
+  <div class="history-title">// 本次已錄入</div>
+  <div id="history-list"></div>
+</div>
+</div>
+
 <script>
-const SHEET_ID = '1cM_zw6RLAJWzBQnBwFAdKCFfp6n9oYEt051McrabfZg';
+const WORKER_URL = 'https://patient-snowflake-50b3acg.ionachen.workers.dev/';
 
-const APPS_SCRIPT_CODE = `function doPost(e) {
-  try {
-    var data = JSON.parse(e.postData.contents);
-    var ss = SpreadsheetApp.openById('1cM_zw6RLAJWzBQnBwFAdKCFfp6n9oYEt051McrabfZg');
-    var sheet = ss.getActiveSheet();
-    
-    // 如果是第一行，加入標題
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow(['活動名稱','日期','時間','地點','費用','主辦單位','活動類型','截止日期','備註','連結','新增時間']);
-    }
-    
-    sheet.appendRow([
-      data.name || '',
-      data.date || '',
-      data.time || '',
-      data.location || '',
-      data.price || '',
-      data.organizer || '',
-      data.type || '',
-      data.deadline || '',
-      data.notes || '',
-      data.link || '',
-      new Date().toLocaleString('zh-TW')
-    ]);
-    
-    return ContentService
-      .createTextOutput(JSON.stringify({success: true}))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch(err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({success: false, error: err.message}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
+const FIELDS = [
+  { key: 'title',         label: 'TITLE',       full: true,  type: 'text' },
+  { key: 'region',        label: 'REGION',      full: false, type: 'select', options: ['tw','hk','jp'] },
+  { key: 'location',      label: 'LOCATION',    full: false, type: 'text' },
+  { key: 'organizer',     label: 'ORGANIZER',   full: false, type: 'text' },
+  { key: 'start_date',    label: 'START DATE',  full: false, type: 'text' },
+  { key: 'end_date',      label: 'END DATE',    full: false, type: 'text' },
+  { key: 'timezone',      label: 'TIMEZONE',    full: false, type: 'text' },
+  { key: 'event_time',    label: 'EVENT TIME',  full: false, type: 'text' },
+  { key: 'website_url',   label: 'WEBSITE',     full: true,  type: 'text' },
+  { key: 'twitter_url',   label: 'TWITTER / X', full: false, type: 'text' },
+  { key: 'facebook_url',  label: 'FACEBOOK',    full: false, type: 'text' },
+  { key: 'instagram_url', label: 'INSTAGRAM',   full: false, type: 'text' },
+  { key: 'bluesky_url',   label: 'BLUESKY',     full: false, type: 'text' },
+];
 
-function doGet(e) {
-  return ContentService
-    .createTextOutput(JSON.stringify({status: 'ok'}))
-    .setMimeType(ContentService.MimeType.JSON);
-}`;
+const SYSTEM_PROMPT = `你是一個 ACG 活動資訊解析助手。從使用者提供的文字或圖片中，找出所有 ACG 相關活動，每個活動單獨解析。
 
-document.getElementById('script-code').textContent = APPS_SCRIPT_CODE;
+重要規則：
+- 只回傳 JSON 陣列，不要有任何其他文字、說明、markdown 格式或 backtick
+- region 只能是 "tw"（台灣）、"hk"（香港）、"jp"（日本）
+- 日期格式必須是 YYYY/MM/DD
+- 社群連結若在文字或圖片中出現（包含帳號名稱 @xxx），請填入完整 URL
+- instagram @xxx 轉為 https://www.instagram.com/xxx
+- twitter @xxx 轉為 https://twitter.com/xxx
+- timezone：台灣填 Asia/Taipei，香港填 Asia/Hong_Kong，日本填 Asia/Tokyo
 
-document.getElementById('show-script').addEventListener('click', (e) => {
-  e.preventDefault();
-  document.getElementById('script-modal').style.display = 'block';
-});
+欄位：title, region, location, organizer, start_date, end_date, timezone, event_time, website_url, twitter_url, facebook_url, instagram_url, bluesky_url
 
-function copyScript() {
-  navigator.clipboard.writeText(APPS_SCRIPT_CODE);
-  const btn = event.target;
-  btn.textContent = '✅ 已複製！';
-  setTimeout(() => btn.textContent = '📋 複製程式碼', 2000);
-}
+範例：[{"title":"活動名稱","region":"tw","location":"台北","organizer":"主辦","start_date":"2026/03/20","end_date":"2026/05/17","timezone":"Asia/Taipei","event_time":"11:00-19:00","website_url":"","twitter_url":"","facebook_url":"","instagram_url":"","bluesky_url":""}]`;
 
+// Config
 function saveConfig() {
   const ak = document.getElementById('anthropic-key').value.trim();
   const wu = document.getElementById('webhook-url').value.trim();
-  const gc = document.getElementById('google-creds').value.trim();
   if (ak) localStorage.setItem('ant_key', ak);
   if (wu) localStorage.setItem('webhook_url', wu);
-  if (gc) localStorage.setItem('google_creds', gc);
-  
   const btn = event.target;
   btn.textContent = '✅ 已儲存';
   setTimeout(() => { btn.textContent = '儲存設定'; document.getElementById('config-details').removeAttribute('open'); }, 1000);
 }
-
-// Load saved config
 window.addEventListener('load', () => {
   const ak = localStorage.getItem('ant_key');
   const wu = localStorage.getItem('webhook_url');
-  const gc = localStorage.getItem('google_creds');
   if (ak) document.getElementById('anthropic-key').value = ak;
   if (wu) document.getElementById('webhook-url').value = wu;
-  if (gc) document.getElementById('google-creds').value = gc;
-  if (!ak && !wu) document.getElementById('config-details').setAttribute('open', '');
+  if (!ak || !wu) document.getElementById('config-details').setAttribute('open', '');
 });
 
+// Tabs
 function switchTab(tab, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -544,23 +322,21 @@ function switchTab(tab, el) {
   document.getElementById('tab-' + tab).classList.add('active');
 }
 
-let imageBase64 = null;
-
+// Image
+let imageBase64 = null, imageMimeType = 'image/jpeg';
 function handleFile(file) {
   if (!file) return;
+  imageMimeType = file.type || 'image/jpeg';
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = e => {
     imageBase64 = e.target.result.split(',')[1];
     const img = document.getElementById('preview-img');
-    img.src = e.target.result;
-    img.style.display = 'block';
+    img.src = e.target.result; img.style.display = 'block';
     document.querySelector('.drop-text').style.display = 'none';
     document.querySelector('.drop-icon').style.display = 'none';
   };
   reader.readAsDataURL(file);
 }
-
-// Drag & drop
 const dz = document.getElementById('drop-zone');
 dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
 dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
@@ -570,202 +346,173 @@ dz.addEventListener('drop', e => {
   if (file && file.type.startsWith('image/')) handleFile(file);
 });
 
-function setStatus(type, msg, showSpinner = false) {
-  const bar = document.getElementById('status-bar');
-  const text = document.getElementById('status-text');
-  const spinner = document.getElementById('spinner');
+// Status
+function setStatus(id, type, msg, spin = false) {
+  const bar = document.getElementById(id);
   bar.className = 'status-bar show ' + type;
-  text.textContent = msg;
-  spinner.style.display = showSpinner ? 'block' : 'none';
+  if (id === 'status-bar') {
+    document.getElementById('spinner').style.display = spin ? 'block' : 'none';
+    document.getElementById('status-text').textContent = msg;
+  } else {
+    bar.innerHTML = (spin ? '<div class="spinner"></div>' : '') + `<span>${msg}</span>`;
+  }
 }
 
-let parsedData = {};
+// Duplicate detection
+function getKnownTitles() { try { return JSON.parse(localStorage.getItem('known_titles') || '[]'); } catch { return []; } }
+function addKnownTitle(t) { const titles = getKnownTitles(); if (!titles.includes(t)) { titles.push(t); localStorage.setItem('known_titles', JSON.stringify(titles)); } }
+function isDuplicate(t) { return getKnownTitles().some(k => k.toLowerCase().trim() === t.toLowerCase().trim()); }
 
-async function parseEvent() {
+// Parse
+async function parseEvents() {
   const apiKey = localStorage.getItem('ant_key') || document.getElementById('anthropic-key').value.trim();
-  if (!apiKey) {
-    setStatus('error', '⚠ 請先在設定中填入 Anthropic API Key');
-    document.getElementById('config-details').setAttribute('open', '');
-    return;
-  }
-
-  const activeTab = document.querySelector('.tab.active').textContent.includes('文字') ? 'text' : 'image';
+  if (!apiKey) { setStatus('status-bar', 'error', '⚠ 請先填入 Anthropic API Key'); document.getElementById('config-details').setAttribute('open',''); return; }
+  const isImage = document.querySelector('.tab.active').textContent.includes('圖片');
   const textInput = document.getElementById('text-input').value.trim();
-
-  if (activeTab === 'text' && !textInput) {
-    setStatus('error', '⚠ 請輸入活動文字資訊');
-    return;
-  }
-  if (activeTab === 'image' && !imageBase64) {
-    setStatus('error', '⚠ 請先上傳活動圖片');
-    return;
-  }
+  if (!isImage && !textInput) { setStatus('status-bar', 'error', '⚠ 請輸入活動文字'); return; }
+  if (isImage && !imageBase64) { setStatus('status-bar', 'error', '⚠ 請上傳圖片'); return; }
 
   const btn = document.getElementById('parse-btn');
   btn.disabled = true;
-  setStatus('loading', 'AI 解析中…', true);
-  document.getElementById('preview-section').classList.remove('show');
+  setStatus('status-bar', 'loading', 'AI 解析中…', true);
+  document.getElementById('events-section').classList.remove('show');
+  document.getElementById('success-preview').classList.remove('show');
 
-  const systemPrompt = `你是一個 ACG 活動資訊解析助手。
-從使用者提供的文字或圖片中，提取活動資訊，並以 JSON 格式回傳。
-只回傳 JSON，不要有任何其他文字或 markdown 格式。
-
-JSON 格式如下（若無資訊則填空字串）：
-{
-  "name": "活動名稱",
-  "date": "日期（格式：2026/03/20 或 2026/03/20-05/17）",
-  "time": "時間（如：11:00-19:00）",
-  "location": "地點",
-  "price": "費用（如：免費、$500、$999起）",
-  "organizer": "主辦單位",
-  "type": "活動類型（展覽/演唱會/快閃店/主題餐廳/快閃活動/其他）",
-  "deadline": "截止日期或最後入場時間",
-  "notes": "備註（優惠、注意事項等）",
-  "link": "相關連結（如有）"
-}`;
-
-  let messages;
-  if (activeTab === 'image') {
-    messages = [{
-      role: 'user',
-      content: [
-        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
-        { type: 'text', text: '請解析這張圖片中的 ACG 活動資訊' }
-      ]
-    }];
-  } else {
-    messages = [{
-      role: 'user',
-      content: textInput
-    }];
-  }
+  const messages = isImage
+    ? [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: imageMimeType, data: imageBase64 }}, { type: 'text', text: '請解析這張圖片中所有 ACG 活動資訊' }]}]
+    : [{ role: 'user', content: '請解析以下文字中所有 ACG 活動資訊：\n\n' + textInput }];
 
   try {
-    const resp = await fetch('https://patient-snowflake-50b3acg.ionachen.workers.dev/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        apiKey,
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: systemPrompt,
-        messages
-      })
+    const resp = await fetch(WORKER_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey, model: 'claude-sonnet-4-20250514', max_tokens: 2000, system: SYSTEM_PROMPT, messages })
     });
-
     const data = await resp.json();
-    console.log('API response:', JSON.stringify(data));
-    if (!resp.ok) throw new Error(data.error?.message || '解析失敗：' + JSON.stringify(data));
+    if (!resp.ok) throw new Error(data.error?.message || 'API 錯誤：' + JSON.stringify(data));
     if (!data.content || !data.content[0]) throw new Error('API 回傳格式錯誤：' + JSON.stringify(data));
 
-    const rawText = data.content[0].text;
-    // Extract JSON from the response
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('AI 未回傳 JSON 格式，請再試一次');
-    parsedData = JSON.parse(jsonMatch[0]);
-    
-    renderPreview(parsedData);
-    setStatus('success', '✅ 解析完成！請確認資訊後送出');
-    document.getElementById('preview-section').classList.add('show');
-    document.getElementById('preview-section').scrollIntoView({ behavior: 'smooth' });
+    const rawText = data.content[0].text.trim();
+    const arrMatch = rawText.match(/\[[\s\S]*\]/);
+    if (!arrMatch) throw new Error('AI 未回傳 JSON 陣列，請再試一次');
+    const events = JSON.parse(arrMatch[0]);
+    if (!Array.isArray(events) || events.length === 0) throw new Error('未找到活動資訊');
+
+    const dupCount = events.filter(e => isDuplicate(e.title)).length;
+    renderEvents(events);
+    setStatus('status-bar', dupCount > 0 ? 'warn' : 'success',
+      `✅ 解析完成，找到 ${events.length} 個活動` + (dupCount > 0 ? `（⚠ ${dupCount} 個可能重複）` : ''));
+    document.getElementById('events-section').classList.add('show');
+    document.getElementById('events-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
-    setStatus('error', '❌ ' + err.message);
+    setStatus('status-bar', 'error', '❌ ' + err.message);
   } finally {
     btn.disabled = false;
     document.getElementById('spinner').style.display = 'none';
   }
 }
 
-const FIELD_LABELS = {
-  name: '活動名稱', date: '日期', time: '時間', location: '地點',
-  price: '費用', organizer: '主辦單位', type: '活動類型',
-  deadline: '截止/最後入場', notes: '備註', link: '連結'
-};
-
-function renderPreview(data) {
-  const grid = document.getElementById('field-grid');
-  grid.innerHTML = '';
-  Object.entries(FIELD_LABELS).forEach(([key, label]) => {
-    const div = document.createElement('div');
-    div.className = 'field-item' + (key === 'name' || key === 'notes' || key === 'link' ? ' full' : '');
-    div.innerHTML = `<div class="field-label">${label}</div>
-      <div class="field-value"><input type="text" id="field-${key}" value="${(data[key] || '').replace(/"/g, '&quot;')}"></div>`;
-    grid.appendChild(div);
+// Render
+function renderEvents(events) {
+  document.getElementById('events-header').textContent = `// 解析結果 — ${events.length} 個活動，請確認後寫入`;
+  const list = document.getElementById('events-list');
+  list.innerHTML = '';
+  events.forEach((ev, i) => {
+    const dup = isDuplicate(ev.title);
+    const card = document.createElement('div');
+    card.className = 'event-card' + (dup ? ' duplicate' : '');
+    card.dataset.index = i;
+    let fieldsHtml = '<div class="field-grid">';
+    FIELDS.forEach(f => {
+      const val = (ev[f.key] || '').replace(/"/g, '&quot;');
+      const fc = f.full ? ' full' : '';
+      const input = f.type === 'select'
+        ? `<select id="ev${i}_${f.key}">${f.options.map(o => `<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('')}</select>`
+        : `<input type="text" id="ev${i}_${f.key}" value="${val}">`;
+      fieldsHtml += `<div class="field-item${fc}"><div class="field-label">${f.label}</div><div class="field-value">${input}</div></div>`;
+    });
+    fieldsHtml += '</div>';
+    card.innerHTML = `
+      <div class="event-card-header">
+        <span class="event-num">活動 ${i + 1}</span>
+        <button class="event-remove" onclick="this.closest('.event-card').remove(); updateHeader();">✕ 移除</button>
+      </div>
+      <div class="duplicate-badge">⚠ 可能重複（已存在相似標題）</div>
+      ${fieldsHtml}`;
+    list.appendChild(card);
   });
 }
 
-function getEditedData() {
+function updateHeader() {
+  const n = document.querySelectorAll('.event-card').length;
+  document.getElementById('events-header').textContent = `// 解析結果 — ${n} 個活動，請確認後寫入`;
+  if (n === 0) document.getElementById('events-section').classList.remove('show');
+}
+
+function getEventData(card) {
+  const i = card.dataset.index;
   const d = {};
-  Object.keys(FIELD_LABELS).forEach(k => {
-    const el = document.getElementById('field-' + k);
-    d[k] = el ? el.value : '';
-  });
+  FIELDS.forEach(f => { const el = document.getElementById(`ev${i}_${f.key}`); d[f.key] = el ? el.value.trim() : ''; });
   return d;
 }
 
-function cancelPreview() {
-  document.getElementById('preview-section').classList.remove('show');
-}
-
-async function submitToSheet() {
+// Submit
+async function submitAll() {
   const webhookUrl = localStorage.getItem('webhook_url') || document.getElementById('webhook-url').value.trim();
-  if (!webhookUrl) {
-    const sb = document.getElementById('submit-status');
-    sb.className = 'status-bar show error';
-    sb.innerHTML = '⚠ 請在設定中填入 Apps Script Webhook URL';
-    document.getElementById('config-details').setAttribute('open', '');
-    return;
+  if (!webhookUrl) { setStatus('submit-status', 'error', '⚠ 請先填入 Webhook URL'); document.getElementById('config-details').setAttribute('open',''); return; }
+
+  const cards = document.querySelectorAll('.event-card');
+  if (cards.length === 0) return;
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = '⏳ 寫入中…';
+  setStatus('submit-status', 'loading', `正在寫入 ${cards.length} 筆資料…`, true);
+
+  const successItems = [];
+  let success = 0, fail = 0;
+
+  for (const card of cards) {
+    const data = getEventData(card);
+    try {
+      await fetch(webhookUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      addKnownTitle(data.title);
+      addHistory(data.title || '(未命名)', true);
+      successItems.push(data); success++;
+    } catch (e) { addHistory(data.title || '(未命名)', false); fail++; }
   }
 
-  const finalData = getEditedData();
-  const confirmBtn = document.getElementById('confirm-btn');
-  confirmBtn.disabled = true;
-  confirmBtn.textContent = '⏳ 寫入中…';
+  setStatus('submit-status', fail === 0 ? 'success' : 'error',
+    fail === 0 ? `✅ 成功寫入 ${success} 筆！Sheet 已依日期排序` : `⚠ ${success} 筆成功，${fail} 筆失敗`);
 
-  const sb = document.getElementById('submit-status');
-  sb.className = 'status-bar show loading';
-  sb.innerHTML = '<div class="spinner"></div> 寫入 Google Sheet…';
-
-  try {
-    const resp = await fetch(webhookUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(finalData)
-    });
-
-    sb.className = 'status-bar show success';
-    sb.textContent = '✅ 已成功寫入 Google Sheet！';
-    addHistory(finalData.name || '(未命名活動)', true);
-    confirmBtn.textContent = '✅ 已寫入';
-    setTimeout(() => {
-      document.getElementById('preview-section').classList.remove('show');
-      document.getElementById('text-input').value = '';
-      imageBase64 = null;
-      document.getElementById('preview-img').style.display = 'none';
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = '✅ 確認寫入 Google Sheet';
-    }, 2000);
-  } catch (err) {
-    sb.className = 'status-bar show error';
-    sb.textContent = '❌ ' + err.message;
-    addHistory(finalData.name || '(未命名)', false);
-    confirmBtn.disabled = false;
-    confirmBtn.textContent = '✅ 確認寫入 Google Sheet';
+  if (successItems.length > 0) {
+    document.getElementById('success-list').innerHTML = successItems.map(d => `
+      <div class="success-item">
+        <span class="success-icon">✅</span>
+        <div class="success-info">
+          <div class="success-title">${d.title || '(未命名)'}</div>
+          <div class="success-meta">${[d.region?.toUpperCase(), d.start_date, d.location].filter(Boolean).join(' · ')}</div>
+        </div>
+      </div>`).join('');
+    document.getElementById('success-preview').classList.add('show');
   }
+
+  btn.textContent = '✅ 寫入完成';
+  setTimeout(() => {
+    document.getElementById('events-section').classList.remove('show');
+    document.getElementById('text-input').value = '';
+    imageBase64 = null;
+    document.getElementById('preview-img').style.display = 'none';
+    document.querySelector('.drop-text').style.display = '';
+    document.querySelector('.drop-icon').style.display = '';
+    btn.disabled = false; btn.textContent = '✅ 確認全部寫入 Google Sheet';
+  }, 4000);
 }
 
-function addHistory(name, success) {
-  const section = document.getElementById('history-section');
-  const list = document.getElementById('history-list');
-  section.style.display = 'block';
-  const now = new Date().toLocaleTimeString('zh-TW');
+function addHistory(name, ok) {
+  document.getElementById('history-section').style.display = 'block';
   const item = document.createElement('div');
   item.className = 'history-item';
-  item.innerHTML = `<div class="history-dot${success ? '' : ' err'}"></div>
-    <div class="history-name">${name}</div>
-    <div class="history-time">${now}</div>`;
-  list.prepend(item);
+  item.innerHTML = `<div class="h-dot${ok?'':' err'}"></div><div class="h-name">${name}</div><div class="h-time">${new Date().toLocaleTimeString('zh-TW')}</div>`;
+  document.getElementById('history-list').prepend(item);
 }
 </script>
 </body>

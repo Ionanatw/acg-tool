@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>ACG 活動快速錄入</title>
+<title>ACG活動輸入</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAbUlEQVR4nGNgGAXDHjDe2I7gaHhiUYGsABMQ1MJEnruIBzS3gBGZA/eahicKGw8gqGXoBxELhfrxByDDsAgi/PmIQnBj+zAIItrHAXI6o3p8aHgOhyCiUD/BMnHoBxHO+gBTECsYAVXmKBgBAAAGhRtQ7VD4UQAAAABJRU5ErkJggg==">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAIAAADdvvtQAAAC+0lEQVR4nO3dQU4bQRQEUDviIqzwVXxirmJWHCVZZAE2K3e1KHf7vd0o+pOerxKVkUbkcAAAAAAAAAAAAAAAAAAAAIDHdry8f12czofvl3c5naecJzJ2+OGn/v/IyWzXlHW9vL1e/fHN5VqGD5889bobm7KuP1OOwtN6+fi8ur65XMvw4ZOnXndjU9alwqLBcLZLhdGnwqLBcLZLhd1SYXdRYfSpsGgwnO1SYbdU2F1UGH0qLBoMZ7tU2C0VdhcVRp8KiwbD2S4VdkuF3UWF0afCosFwtquyLrhynHivv5ehE5zm32QJxXX9vM+wlzm3ORwOk36yPc+Pxz3WNTNAU95H1n2pudce6/IWRkSF1eyxLhVWs8e6VBgRFVazx7pUWM0e61JhRFRYzR7rUmE1e6xLhRERICICRESAiAgQEQECYFG+iV5b/Zto/wYiIkBEBIiIABERICICRESAiAgQEQEiIkBEBIiIABERICICRESAiAgQEQECeo7fv4k8nqJPJH3S+vsqn7R+/0tVGBEBIiJARASIiAARESAiAkREgIgIEBEBIiJARASIiAARESAiAkREgIgIEACL8mt+1+bX/LI2ASIiQEQEiIgAEREgIgJEZOb/G//x+Sg3eR71dc0M0Nvro9zkedTXpcKIqLC11delwtZWX5cKI6LC1lZflwpbW31dKoyIClubdbE2n7TWFNf18z7DVFjNHuvyFlazx7q8hRFRYTV7rEuF1eyxLhVGRIXV7LEuFVazx7pUGBEVVrPHulRYzR7rUmFEVFjNHutSYTV7rEuFEVFhNXusS4XVWBdM/aT18j4ydTr3D5CcvP7Uw6as6+EqrHKA5OT1px42ZV3ewog83FtY5QDJyetPPWzKulRYNBjOdqkw+lRYNBjOdqmwaQdQYcODKoyICosGw9kuFTbtACpseFCFEVFh0WA426XCph1AhQ0PqjAiKiwaDGe7VNi0A6iw4UEVRkSFRYPhbFdlXQAAAAAAAAAAAAAAAAAAAPDb/gEOjUWM0VWPnAAAAABJRU5ErkJggg==">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ACG活動輸入">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIkFDR+a0u+WLlei8uOWFpSIsICJzaG9ydF9uYW1lIjogIkFDR+a0u+WLlei8uOWFpSIsICJzdGFydF91cmwiOiAiLyIsICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLCAiYmFja2dyb3VuZF9jb2xvciI6ICIjMGEwYTBmIiwgInRoZW1lX2NvbG9yIjogIiMwYTBhMGYifQ==">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -41,30 +48,6 @@ h1 {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 11px; font-family: 'Share Tech Mono', monospace;
   color: var(--accent2); text-decoration: none; opacity: 0.7; margin-top: 6px;
-}
-details.config-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 12px; padding: 16px 18px; margin-bottom: 16px;
-}
-details.config-card summary {
-  cursor: pointer; font-size: 12px; font-family: 'Share Tech Mono', monospace;
-  color: var(--muted); list-style: none; user-select: none; display: flex; align-items: center; gap: 6px;
-}
-details.config-card summary::-webkit-details-marker { display: none; }
-details.config-card summary::before { content: '▶'; font-size: 9px; transition: transform 0.2s; }
-details.config-card[open] summary::before { transform: rotate(90deg); }
-.config-inner { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
-label { font-size: 11px; color: var(--muted); font-family: 'Share Tech Mono', monospace; display: block; margin-bottom: 3px; }
-input[type=text], input[type=password] {
-  width: 100%; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; padding: 9px 12px; color: var(--text);
-  font-family: 'Share Tech Mono', monospace; font-size: 13px; outline: none; -webkit-appearance: none;
-}
-input:focus { border-color: var(--accent); }
-.save-btn {
-  padding: 9px 20px; background: var(--accent); border: none;
-  border-radius: 8px; color: #fff; font-family: 'Zen Kaku Gothic New', sans-serif;
-  font-size: 13px; font-weight: 700; cursor: pointer;
 }
 .input-section {
   background: var(--card); border: 1px solid var(--border);
@@ -213,14 +196,7 @@ textarea.main-input:focus { border-color: var(--accent); }
   <a class="sheet-link" href="https://docs.google.com/spreadsheets/d/1cM_zw6RLAJWzBQnBwFAdKCFfp6n9oYEt051McrabfZg/edit" target="_blank">📊 開啟 Google Sheet ↗</a>
 </header>
 
-<details class="config-card" id="config-details">
-  <summary>⚙ 設定</summary>
-  <div class="config-inner">
-    <div><label>ANTHROPIC API KEY</label><input type="password" id="anthropic-key" placeholder="sk-ant-..."></div>
-    <div><label>APPS SCRIPT WEBHOOK URL</label><input type="text" id="webhook-url" placeholder="https://script.google.com/macros/s/.../exec"></div>
-    <button class="save-btn" onclick="saveConfig()">儲存設定</button>
-  </div>
-</details>
+<!-- config hardcoded -->
 
 <div class="input-section">
   <div class="tab-bar">
@@ -264,6 +240,8 @@ textarea.main-input:focus { border-color: var(--accent); }
 
 <script>
 const WORKER_URL = 'https://patient-snowflake-50b3acg.ionachen.workers.dev/';
+const HARDCODED_KEY = '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';
+const HARDCODED_WEBHOOK = 'https://script.google.com/macros/s/AKfycbxfFnDo0JMNDsMgHvOQKTWyrCpfD5xHCLiXNvBjMbyLCyMkzg280OSw_g-nFjGdoZcr/exec';
 
 const FIELDS = [
   { key: 'title',         label: 'TITLE',       full: true,  type: 'text' },
@@ -296,23 +274,6 @@ const SYSTEM_PROMPT = `你是一個 ACG 活動資訊解析助手。從使用者�
 
 範例：[{"title":"活動名稱","region":"tw","location":"台北","organizer":"主辦","start_date":"2026/03/20","end_date":"2026/05/17","timezone":"Asia/Taipei","event_time":"11:00-19:00","website_url":"","twitter_url":"","facebook_url":"","instagram_url":"","bluesky_url":""}]`;
 
-// Config
-function saveConfig() {
-  const ak = document.getElementById('anthropic-key').value.trim();
-  const wu = document.getElementById('webhook-url').value.trim();
-  if (ak) localStorage.setItem('ant_key', ak);
-  if (wu) localStorage.setItem('webhook_url', wu);
-  const btn = event.target;
-  btn.textContent = '✅ 已儲存';
-  setTimeout(() => { btn.textContent = '儲存設定'; document.getElementById('config-details').removeAttribute('open'); }, 1000);
-}
-window.addEventListener('load', () => {
-  const ak = localStorage.getItem('ant_key');
-  const wu = localStorage.getItem('webhook_url');
-  if (ak) document.getElementById('anthropic-key').value = ak;
-  if (wu) document.getElementById('webhook-url').value = wu;
-  if (!ak || !wu) document.getElementById('config-details').setAttribute('open', '');
-});
 
 // Tabs
 function switchTab(tab, el) {
@@ -365,7 +326,7 @@ function isDuplicate(t) { return getKnownTitles().some(k => k.toLowerCase().trim
 
 // Parse
 async function parseEvents() {
-  const apiKey = localStorage.getItem('ant_key') || document.getElementById('anthropic-key').value.trim();
+  const apiKey = HARDCODED_KEY;
   if (!apiKey) { setStatus('status-bar', 'error', '⚠ 請先填入 Anthropic API Key'); document.getElementById('config-details').setAttribute('open',''); return; }
   const isImage = document.querySelector('.tab.active').textContent.includes('圖片');
   const textInput = document.getElementById('text-input').value.trim();
@@ -457,7 +418,7 @@ function getEventData(card) {
 
 // Submit
 async function submitAll() {
-  const webhookUrl = localStorage.getItem('webhook_url') || document.getElementById('webhook-url').value.trim();
+  const webhookUrl = HARDCODED_WEBHOOK;
   if (!webhookUrl) { setStatus('submit-status', 'error', '⚠ 請先填入 Webhook URL'); document.getElementById('config-details').setAttribute('open',''); return; }
 
   const cards = document.querySelectorAll('.event-card');

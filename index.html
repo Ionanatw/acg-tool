@@ -654,7 +654,9 @@ JSON 格式如下（若無資訊則填空字串）：
     });
 
     const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error?.message || '解析失敗');
+    console.log('API response:', JSON.stringify(data));
+    if (!resp.ok) throw new Error(data.error?.message || '解析失敗：' + JSON.stringify(data));
+    if (!data.content || !data.content[0]) throw new Error('API 回傳格式錯誤：' + JSON.stringify(data));
 
     const raw = data.content[0].text.replace(/```json|```/g, '').trim();
     parsedData = JSON.parse(raw);

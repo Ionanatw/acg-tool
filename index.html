@@ -517,9 +517,9 @@ function saveConfig() {
   const ak = document.getElementById('anthropic-key').value.trim();
   const wu = document.getElementById('webhook-url').value.trim();
   const gc = document.getElementById('google-creds').value.trim();
-  if (ak) sessionStorage.setItem('ant_key', ak);
-  if (wu) sessionStorage.setItem('webhook_url', wu);
-  if (gc) sessionStorage.setItem('google_creds', gc);
+  if (ak) localStorage.setItem('ant_key', ak);
+  if (wu) localStorage.setItem('webhook_url', wu);
+  if (gc) localStorage.setItem('google_creds', gc);
   
   const btn = event.target;
   btn.textContent = '✅ 已儲存';
@@ -528,9 +528,9 @@ function saveConfig() {
 
 // Load saved config
 window.addEventListener('load', () => {
-  const ak = sessionStorage.getItem('ant_key');
-  const wu = sessionStorage.getItem('webhook_url');
-  const gc = sessionStorage.getItem('google_creds');
+  const ak = localStorage.getItem('ant_key');
+  const wu = localStorage.getItem('webhook_url');
+  const gc = localStorage.getItem('google_creds');
   if (ak) document.getElementById('anthropic-key').value = ak;
   if (wu) document.getElementById('webhook-url').value = wu;
   if (gc) document.getElementById('google-creds').value = gc;
@@ -582,7 +582,7 @@ function setStatus(type, msg, showSpinner = false) {
 let parsedData = {};
 
 async function parseEvent() {
-  const apiKey = sessionStorage.getItem('ant_key') || document.getElementById('anthropic-key').value.trim();
+  const apiKey = localStorage.getItem('ant_key') || document.getElementById('anthropic-key').value.trim();
   if (!apiKey) {
     setStatus('error', '⚠ 請先在設定中填入 Anthropic API Key');
     document.getElementById('config-details').setAttribute('open', '');
@@ -705,7 +705,7 @@ function cancelPreview() {
 }
 
 async function submitToSheet() {
-  const webhookUrl = sessionStorage.getItem('webhook_url') || document.getElementById('webhook-url').value.trim();
+  const webhookUrl = localStorage.getItem('webhook_url') || document.getElementById('webhook-url').value.trim();
   if (!webhookUrl) {
     const sb = document.getElementById('submit-status');
     sb.className = 'status-bar show error';

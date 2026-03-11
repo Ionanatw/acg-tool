@@ -241,7 +241,6 @@ textarea.main-input:focus { border-color: var(--accent); }
 
 <script>
 const WORKER_URL = 'https://patient-snowflake-50b3acg.ionachen.workers.dev/';
-const HARDCODED_KEY = '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';
 const HARDCODED_WEBHOOK = 'https://script.google.com/macros/s/AKfycbxfFnDo0JMNDsMgHvOQKTWyrCpfD5xHCLiXNvBjMbyLCyMkzg280OSw_g-nFjGdoZcr/exec';
 
 const FIELDS = [
@@ -338,17 +337,16 @@ function isDuplicate(t) {
 
 // Parse
 async function parseEvents() {
-  const apiKey = HARDCODED_KEY;
-  const cfg = document.getElementById('config-details');
-  if (!apiKey) {
-    setStatus('status-bar', 'error', '⚠ 請先填入 Anthropic API Key');
-    if (cfg) cfg.setAttribute('open','');
-    return;
-  }
   const isImage = document.querySelector('.tab.active').textContent.includes('圖片');
   const textInput = document.getElementById('text-input').value.trim();
-  if (!isImage && !textInput) { setStatus('status-bar', 'error', '⚠ 請輸入活動文字'); return; }
-  if (isImage && !imageBase64) { setStatus('status-bar', 'error', '⚠ 請上傳圖片'); return; }
+  if (!isImage && !textInput) {
+    setStatus('status-bar', 'error', '⚠ 請輸入活動文字');
+    return;
+  }
+  if (isImage && !imageBase64) {
+    setStatus('status-bar', 'error', '⚠ 請上傳圖片');
+    return;
+  }
 
   const btn = document.getElementById('parse-btn');
   btn.disabled = true;
@@ -360,7 +358,7 @@ async function parseEvents() {
     ? [{
         role: 'user',
         content: [
-          { type: 'image', source: { type: 'base64', media_type: imageMimeType, data: imageBase64 }},
+          { type: 'image', source: { type: 'base64', media_type: imageMimeType, data: imageBase64 } },
           { type: 'text', text: '請解析這張圖片中所有 ACG 活動資訊' }
         ]
       }]
@@ -374,7 +372,6 @@ async function parseEvents() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        apiKey,
         model: 'claude-sonnet-4-5',
         max_tokens: 2000,
         system: SYSTEM_PROMPT,
@@ -386,10 +383,10 @@ async function parseEvents() {
     if (!data.content || !data.content[0]) throw new Error('API 回傳格式錯誤：' + JSON.stringify(data));
 
     const rawText = data.content[0].text.trim();
-console.log('AI rawText >>>', rawText);   // 先暫時加這行
-const arrMatch = rawText.match(/\[[\s\S]*\]/);
-if (!arrMatch) throw new Error('AI 未回傳 JSON 陣列，請再試一次');
-const events = JSON.parse(arrMatch[0]);
+    console.log('AI rawText >>>', rawText);
+    const arrMatch = rawText.match(/\[[\s\S]*\]/);
+    if (!arrMatch) throw new Error('AI 未回傳 JSON 陣列，請再試一次');
+    const events = JSON.parse(arrMatch[0]);
 
     if (!Array.isArray(events) || events.length === 0) throw new Error('未找到活動資訊');
 
@@ -409,6 +406,7 @@ const events = JSON.parse(arrMatch[0]);
     document.getElementById('spinner').style.display = 'none';
   }
 }
+
 
 // Render
 function renderEvents(events) {

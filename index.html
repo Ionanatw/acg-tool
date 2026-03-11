@@ -3,11 +3,17 @@
 <head>
 <meta charset="UTF-8">
   <!--
+ <!--
 ACG 活動輸入工具
 版本：v1.0 (TEXT+IMAGE ONLY)
 日期：2026-03-12
 說明：這一版只支援文字與圖片解析，尚未加入網址(mode=url)。
 對應 Cloudflare Worker：無 sourceType 處理，僅轉送 Anthropic。
+// TODO (v1.1):
+// - UI 新增「🌐 貼活動網址」Tab
+// - parseEvents 增加 sourceType=url 分支
+// - 對應 Worker 抓回的多活動 JSON 陣列，沿用現有 renderEvents / submitAll
+-->
 -->
 
 <meta name="acg-tool-version" content="v1.0-text-image-only">

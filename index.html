@@ -386,13 +386,10 @@ async function parseEvents() {
     if (!data.content || !data.content[0]) throw new Error('API 回傳格式錯誤：' + JSON.stringify(data));
 
     const rawText = data.content[0].text.trim();
-    // 版本一：直接 parse，因為 prompt 已保證只回傳 JSON 陣列
-    // const events = JSON.parse(rawText);
-
-    // 版本二：保險起見，先抓第一個 [] 區塊
-    const arrMatch = rawText.match(/\[[\s\S]*\]/);
-    if (!arrMatch) throw new Error('AI 未回傳 JSON 陣列，請再試一次');
-    const events = JSON.parse(arrMatch[0]);
+console.log('AI rawText >>>', rawText);   // 先暫時加這行
+const arrMatch = rawText.match(/\[[\s\S]*\]/);
+if (!arrMatch) throw new Error('AI 未回傳 JSON 陣列，請再試一次');
+const events = JSON.parse(arrMatch[0]);
 
     if (!Array.isArray(events) || events.length === 0) throw new Error('未找到活動資訊');
 

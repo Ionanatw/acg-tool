@@ -641,10 +641,11 @@ JSON 格式如下（若無資訊則填空字串）：
   }
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('https://patient-snowflake-50b3acg.ionachen.workers.dev/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-inaccessible': 'true' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        apiKey,
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
         system: systemPrompt,

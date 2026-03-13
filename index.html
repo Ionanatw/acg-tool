@@ -4,17 +4,13 @@
 <meta charset="UTF-8">
   <!--
 ACG 活動輸入工具
-版本：v1.0 (TEXT+IMAGE ONLY)
-日期：2026-03-12
-說明：這一版只支援文字與圖片解析，尚未加入網址(mode=url)。
-對應 Cloudflare Worker：無 sourceType 處理，僅轉送 Anthropic。
-// TODO (v1.1):
-// - UI 新增「🌐 貼活動網址」Tab
-// - parseEvents 增加 sourceType=url 分支
-// - 對應 Worker 抓回的多活動 JSON 陣列，沿用現有 renderEvents / submitAll
+版本：v1.1 (TEXT+IMAGE+URL)
+日期：2026-03-13
+說明：支援文字、圖片與網址解析。
+對應 Cloudflare Worker：有 sourceType=url 處理
 -->
 
-<meta name="acg-tool-version" content="v1.0-text-image-only">
+<meta name="acg-tool-version" content="v1.1-text-image-url">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>ACG活動輸入</title>
@@ -214,6 +210,7 @@ textarea.main-input:focus { border-color: var(--accent); }
   <div class="tab-bar">
     <button class="tab active" onclick="switchTab('text',this)">📝 貼上文字</button>
     <button class="tab" onclick="switchTab('image',this)">🖼 上傳圖片</button>
+    <button class="tab" onclick="switchTab('url',this)">🌐 貼活動網址</button>
   </div>
   <div class="tab-content active" id="tab-text">
     <textarea class="main-input" id="text-input" placeholder="貼上活動資訊文字…&#10;可包含多個活動，AI 會自動分開解析"></textarea>
@@ -225,6 +222,9 @@ textarea.main-input:focus { border-color: var(--accent); }
       <div class="drop-text">點擊或拖曳圖片至此<br><strong>支援截圖、活動海報</strong></div>
       <img id="preview-img" src="" alt="預覽">
     </div>
+  </div>
+  <div class="tab-content" id="tab-url">
+    <textarea class="main-input" id="url-input" placeholder="貼上活動網址…&#10;支援多行，每一行都會自動抓取資料"></textarea>
   </div>
   <button class="parse-btn" id="parse-btn" onclick="parseEvents()"><span>✨</span> AI 解析活動資訊</button>
   <div class="status-bar" id="status-bar">
@@ -351,14 +351,23 @@ function isDuplicate(t) {
 
 // Parse
 async function parseEvents() {
-  const isImage = document.querySelector('.tab.active').textContent.includes('圖片');
+  const activeTab = document.querySelector('.tab.active').textContent;
+  const isImage = activeTab.includes('圖片');
+  const isUrl = activeTab.includes('網址');
+  
   const textInput = document.getElementById('text-input').value.trim();
-  if (!isImage && !textInput) {
+  const urlInput = document.getElementById('url-input') ? document.getElementById('url-input').value.trim() : '';
+
+  if (!isImage && !isUrl && !textInput) {
     setStatus('status-bar', 'error', '⚠ 請輸入活動文字');
     return;
   }
   if (isImage && !imageBase64) {
     setStatus('status-bar', 'error', '⚠ 請上傳圖片');
+    return;
+  }
+  if (isUrl && !urlInput) {
+    setStatus('status-bar', 'error', '⚠ 請輸入活動網址');
     return;
   }
 
@@ -368,29 +377,40 @@ async function parseEvents() {
   document.getElementById('events-section').classList.remove('show');
   document.getElementById('success-preview').classList.remove('show');
 
-  const messages = isImage
-    ? [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: imageMimeType, data: imageBase64 } },
-          { type: 'text', text: '請解析這張圖片中所有 ACG 活動資訊' }
-        ]
-      }]
-    : [{
-        role: 'user',
-        content: '請解析以下文字中所有 ACG 活動資訊：\n\n' + textInput
-      }];
+  const requestBody = {
+    model: 'claude-sonnet-4-5',
+    max_tokens: 2000,
+    system: SYSTEM_PROMPT
+  };
+
+  if (isUrl) {
+    const urls = urlInput.split('\n').map(u => u.trim()).filter(Boolean);
+    requestBody.sourceType = 'url';
+    requestBody.urls = urls;
+    requestBody.messages = [{
+      role: 'user',
+      content: '請解析以下網址中所有 ACG 活動資訊：\n\n' + urls.join('\n')
+    }];
+  } else if (isImage) {
+    requestBody.messages = [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: imageMimeType, data: imageBase64 } },
+        { type: 'text', text: '請解析這張圖片中所有 ACG 活動資訊' }
+      ]
+    }];
+  } else {
+    requestBody.messages = [{
+      role: 'user',
+      content: '請解析以下文字中所有 ACG 活動資訊：\n\n' + textInput
+    }];
+  }
 
   try {
     const resp = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 2000,
-        system: SYSTEM_PROMPT,
-        messages
-      })
+      body: JSON.stringify(requestBody)
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error?.message || 'API 錯誤：' + JSON.stringify(data));

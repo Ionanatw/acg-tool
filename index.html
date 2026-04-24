@@ -271,6 +271,8 @@ const FIELDS = [
   { key: 'facebook_url',  label: 'FACEBOOK',    full: false, type: 'text' },
   { key: 'instagram_url', label: 'INSTAGRAM',   full: false, type: 'text' },
   { key: 'bluesky_url',   label: 'BLUESKY',     full: false, type: 'text' },
+  { key: 'city',          label: 'CITY',        full: false, type: 'text' },
+  { key: 'threads',       label: 'THREADS',     full: true,  type: 'text' },
 ];
 
 const SYSTEM_PROMPT = `你是一個 ACG 活動資訊解析助手。從使用者提供的文字或圖片中，找出所有 ACG 相關活動，每個活動單獨解析。
@@ -283,10 +285,25 @@ const SYSTEM_PROMPT = `你是一個 ACG 活動資訊解析助手。從使用者�
 - instagram @xxx 轉為 https://www.instagram.com/xxx
 - twitter @xxx 轉為 https://twitter.com/xxx
 - timezone：台灣填 Asia/Taipei，香港填 Asia/Hong_Kong，日本填 Asia/Tokyo
+- end_date：活動橫跨多天才填，單日活動留空字串
+- city：根據 location 判斷所屬城市。tw 填縣市名稱（如：台北市、新北市、台中市、高雄市、台南市、桃園市）；hk 填香港島／九龍／新界其中之一；jp 填都道府縣（如：東京都、大阪府、神奈川縣、愛知縣）。無法判斷時填空字串
 
-欄位：title, region, location, organizer, start_date, end_date, timezone, event_time, website_url, twitter_url, facebook_url, instagram_url, bluesky_url
+欄位：title, region, location, organizer, start_date, end_date, timezone, event_time, website_url, twitter_url, facebook_url, instagram_url, bluesky_url, city
 
-範例：[{"title":"活動名稱","region":"tw","location":"台北","organizer":"主辦","start_date":"2026/03/20","end_date":"2026/05/17","timezone":"Asia/Taipei","event_time":"11:00-19:00","website_url":"","twitter_url":"","facebook_url":"","instagram_url":"","bluesky_url":""}]`;
+範例：[{"title":"活動名稱","region":"tw","location":"台北","organizer":"主辦","start_date":"2026/03/20","end_date":"2026/05/17","timezone":"Asia/Taipei","event_time":"11:00-19:00","website_url":"","twitter_url":"","facebook_url":"","instagram_url":"","bluesky_url":"","city":"台北市"}]`;
+
+// Threads text auto-generation
+function generateThreadsText(ev) {
+  const title = (ev.title || '').trim();
+  const startDate = (ev.start_date || '').trim();
+  const endDate = (ev.end_date || '').trim();
+  const city = (ev.city || '').replace(/(市|縣|都|府|県)$/, '');
+  if (!startDate || !title) return '';
+  const fmt = d => { const p = d.split('/'); return p.length >= 3 ? p[1].padStart(2,'0') + '/' + p[2].padStart(2,'0') : d; };
+  const cityPart = city ? ' ｜ ' + city : '';
+  if (!endDate || endDate === startDate) return fmt(startDate) + ' ' + title + cityPart;
+  return fmt(startDate) + ' ⮕ ' + fmt(endDate) + ' ' + title + cityPart;
+}
 
 // Tabs
 function switchTab(tab, el) {
@@ -449,6 +466,7 @@ function renderEvents(events) {
   const list = document.getElementById('events-list');
   list.innerHTML = '';
   events.forEach((ev, i) => {
+    if (!ev.threads) ev.threads = generateThreadsText(ev);
     const title = ev.title || '';
     const dup = title && isDuplicate(title);
     const card = document.createElement('div');

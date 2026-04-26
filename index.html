@@ -541,6 +541,7 @@ async function submitAll() {
 
   for (const card of cards) {
     const data = getEventData(card);
+    console.log('送出資料:', JSON.stringify(data));
     try {
       await fetch(webhookUrl, {
         method: 'POST',

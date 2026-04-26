@@ -255,7 +255,7 @@ textarea.main-input:focus { border-color: var(--accent); }
 
 <script>
 const WORKER_URL = 'https://patient-snowflake-50b3acg.ionachen.workers.dev/';
-const HARDCODED_WEBHOOK = 'https://script.google.com/macros/s/AKfycbxfFnDo0JMNDsMgHvOQKTWyrCpfD5xHCLiXNvBjMbyLCyMkzg280OSw_g-nFjGdoZcr/exec';
+const HARDCODED_WEBHOOK = 'https://script.google.com/macros/s/AKfycbzhDpMGTUthgQnLsOfZz-kPSL7w42_Zj1Acv0f1K8bG54X70wF9D9LSMDzHad6jvfd4/exec';
 
 const FIELDS = [
   { key: 'title',         label: 'TITLE',       full: true,  type: 'text' },
@@ -272,7 +272,7 @@ const FIELDS = [
   { key: 'instagram_url', label: 'INSTAGRAM',   full: false, type: 'text' },
   { key: 'bluesky_url',   label: 'BLUESKY',     full: false, type: 'text' },
   { key: 'city',          label: 'CITY',        full: false, type: 'text' },
-  { key: 'threads',       label: 'THREADS',     full: true,  type: 'text' },
+  { key: 'threads',       label: 'THREADS (預覽)', full: true, type: 'text', preview: true },
 ];
 
 const SYSTEM_PROMPT = `你是一個 ACG 活動資訊解析助手。從使用者提供的文字或圖片中，找出所有 ACG 相關活動，每個活動單獨解析。
@@ -481,7 +481,7 @@ function renderEvents(events) {
         ? `<select id="ev${i}_${f.key}">${
             f.options.map(o => `<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('')
           }</select>`
-        : `<input type="text" id="ev${i}_${f.key}" value="${val}">`;
+        : `<input type="text" id="ev${i}_${f.key}" value="${val}"${f.preview ? ' readonly style="opacity:0.5;cursor:default"' : ''}>`;
       fieldsHtml +=
         `<div class="field-item${fc}">
            <div class="field-label">${f.label}</div>
@@ -511,6 +511,7 @@ function getEventData(card) {
   const i = card.dataset.index;
   const d = {};
   FIELDS.forEach(f => {
+    if (f.preview) return;
     const el = document.getElementById(`ev${i}_${f.key}`);
     d[f.key] = el ? el.value.trim() : '';
   });

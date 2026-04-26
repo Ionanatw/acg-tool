@@ -306,7 +306,7 @@ function generateThreadsText(ev) {
   const fmt = d => { const p = d.split('/'); return p.length >= 3 ? p[1].padStart(2,'0') + '/' + p[2].padStart(2,'0') : d; };
   const locationPart = location ? ' ' + location : '';
   const cityPart = city ? ' ｜ ' + city : '';
-  if (!endDate || endDate === startDate) return fmt(startDate) + ' ' + title + locationPart + cityPart;
+  if (!endDate || endDate === startDate) return '⮕ ' + fmt(startDate) + ' ' + title + locationPart + cityPart;
   return '⮕ ' + fmt(startDate) + ' ~ ' + fmt(endDate) + ' ' + title + locationPart + cityPart;
 }
 

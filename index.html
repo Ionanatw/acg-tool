@@ -277,10 +277,13 @@ const FIELDS = [
 
 const SYSTEM_PROMPT = `你是一個 ACG 活動資訊解析助手。從使用者提供的文字或圖片中，找出所有 ACG 相關活動，每個活動單獨解析。
 
+今天是 ${new Date().getFullYear()}年${new Date().getMonth()+1}月${new Date().getDate()}日。
+
 重要規則：
 - 只回傳 JSON 陣列，不要有任何其他文字、說明、markdown 格式或 backtick
 - region 只能是 "tw"（台灣）、"hk"（香港）、"jp"（日本）
 - 日期格式必須是 YYYY/MM/DD
+- 年份未標示時，優先使用今年（${new Date().getFullYear()}）；若活動日期已過今年，才考慮明年
 - 社群連結若在文字或圖片中出現（包含帳號名稱 @xxx），請填入完整 URL
 - instagram @xxx 轉為 https://www.instagram.com/xxx
 - twitter @xxx 轉為 https://twitter.com/xxx

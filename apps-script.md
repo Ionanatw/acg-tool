@@ -1,13 +1,8 @@
-# ACG Event — Google Apps Script
+// ACG Event — Google Apps Script
+// 綁定於 Google Sheet（ACG_event）
+// 開啟方式：ACG_event → 擴充功能 → Apps Script
+// 最後更新：2026-04-27
 
-綁定於 Google Sheet（ACG_event）。
-開啟方式：ACG_event → 擴充功能 → Apps Script
-
-最後更新：2026-04-27
-
----
-
-```javascript
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
@@ -31,7 +26,7 @@ function doPost(e) {
     row[11] = data.facebook_url  || '';
     row[12] = data.instagram_url || '';
     row[13] = data.bluesky_url   || '';
-    row[14] = '';  // O = img（手動填）
+    row[14] = '';
     row[15] = calcThreads(data.start_date, data.end_date, data.title, data.location, data.city);
 
     sheet.appendRow(row);
@@ -48,7 +43,6 @@ function manualSort() {
   var lastRow = sheet.getLastRow();
   if (lastRow <= 2) return;
 
-  // 強制清除 P 欄（含 ARRAYFORMULA 殘留）
   sheet.getRange(2, 16, lastRow - 1, 1).clearContent();
 
   var dataRange = sheet.getRange(2, 1, lastRow - 1, 16);
@@ -70,7 +64,6 @@ function sortSheet(sheet) {
   values.sort(function(a, b) { return toDate(a[5]) - toDate(b[5]); });
   dataRange.setValues(values);
 
-  // sort 後補回整欄日期格式
   sheet.getRange(2, 6, lastRow - 1).setNumberFormat('yyyy/mm/dd');
   sheet.getRange(2, 7, lastRow - 1).setNumberFormat('yyyy/mm/dd');
 }
@@ -106,35 +99,3 @@ function json(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
-```
-
----
-
-## Sheet 欄位對應
-
-| 欄 | 欄位 |
-|----|------|
-| A | title |
-| B | region |
-| C | location |
-| D | city |
-| E | organizer |
-| F | start_date |
-| G | end_date |
-| H | timezone |
-| I | event_time |
-| J | website_url |
-| K | twitter_url |
-| L | facebook_url |
-| M | instagram_url |
-| N | bluesky_url |
-| O | img（手動） |
-| P | threads（由 AS 自動計算） |
-
-## 條件式格式（已過期整列灰色）
-
-套用範圍：`A2:P`
-
-```
-=IF($G2<>"",$G2<TODAY(),$F2<TODAY())
-```

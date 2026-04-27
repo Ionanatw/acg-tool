@@ -83,8 +83,8 @@ function calcThreads(startDate, endDate, title, city) {
   var loc = cityShort ? '　📍 ' + cityShort : '';
   var sameDay = !endDate || toDate(endDate).getTime() === toDate(startDate).getTime();
   return sameDay
-    ? fmt(startDate) + ' ' + title + loc
-    : fmt(startDate) + '-' + fmt(endDate) + ' ' + title + loc;
+    ? fmt(startDate) + '：' + title + loc
+    : fmt(startDate) + '-' + fmt(endDate) + '：' + title + loc;
 }
 
 function calcThreadsLoc(startDate, endDate, title, location) {
@@ -98,8 +98,8 @@ function calcThreadsLoc(startDate, endDate, title, location) {
   var loc = location ? '　📍 ' + location : '';
   var sameDay = !endDate || toDate(endDate).getTime() === toDate(startDate).getTime();
   return sameDay
-    ? fmt(startDate) + ' ' + title + loc
-    : fmt(startDate) + '-' + fmt(endDate) + ' ' + title + loc;
+    ? fmt(startDate) + '：' + title + loc
+    : fmt(startDate) + '-' + fmt(endDate) + '：' + title + loc;
 }
 
 function toDate(v) {

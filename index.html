@@ -302,10 +302,10 @@ function generateThreadsText(ev) {
   const endDate = (ev.end_date || '').trim();
   const city = (ev.city || '').replace(/(市|縣|都|府|県)$/, '');
   if (!startDate || !title) return '';
-  const fmt = d => { const p = d.split('/'); return p.length >= 3 ? parseInt(p[1]) + '/' + parseInt(p[2]) : d; };
-  const loc = city ? '📍 ' + city + '｜' : '';
-  if (!endDate || endDate === startDate) return fmt(startDate) + ' ' + loc + title;
-  return fmt(startDate) + '-' + fmt(endDate) + ' ' + loc + title;
+  const fmt = d => { const p = d.split('/'); return p.length >= 3 ? p[1].padStart(2,'0') + '/' + p[2].padStart(2,'0') : d; };
+  const loc = city ? '　📍 ' + city + '｜' : '';
+  if (!endDate || endDate === startDate) return fmt(startDate) + loc + title;
+  return fmt(startDate) + '-' + fmt(endDate) + loc + title;
 }
 
 // Tabs

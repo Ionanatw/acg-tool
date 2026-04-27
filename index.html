@@ -545,12 +545,13 @@ async function submitAll() {
   for (const card of cards) {
     const data = getEventData(card);
     try {
-      await fetch(webhookUrl, {
+      const resp = await fetch(webhookUrl, {
         method: 'POST',
-        mode: 'no-cors', // 如果之後調整 Apps Script CORS，可以移除 no-cors 來拿回應狀態
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
+      const result = await resp.json();
+      if (result.error) throw new Error(result.error);
       addKnownTitle(data.title);
       addHistory(data.title || '(未命名)', true);
       successItems.push(data);

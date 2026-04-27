@@ -32,6 +32,7 @@ function doPost(e) {
     row[16] = calcThreadsLoc(data.start_date, data.end_date, data.title, data.location);
 
     sheet.appendRow(row);
+    SpreadsheetApp.flush();
     sortSheet(sheet);
     return json({ status: 'ok', title: data.title });
   } catch (err) {

@@ -81,15 +81,14 @@ function calcThreads(startDate, endDate, title, location, city) {
     var p = String(d instanceof Date
       ? (d.getFullYear() + '/' + (d.getMonth()+1) + '/' + d.getDate())
       : d).split('/');
-    return String(parseInt(p[1])).padStart(2,'0') + '/' + String(parseInt(p[2])).padStart(2,'0');
+    return parseInt(p[1]) + '/' + parseInt(p[2]);
   };
   var cityShort = (city || '').replace(/(市|縣|都|府|県)$/, '');
-  var loc = location ? ' ' + location : '';
-  var cit = cityShort ? ' ｜ ' + cityShort : '';
+  var loc = cityShort ? '📍 ' + cityShort + '｜' : '';
   var sameDay = !endDate || toDate(endDate).getTime() === toDate(startDate).getTime();
   return sameDay
-    ? '⮕ ' + fmt(startDate) + ' ' + title + loc + cit
-    : '⮕ ' + fmt(startDate) + ' ~ ' + fmt(endDate) + ' ' + title + loc + cit;
+    ? fmt(startDate) + ' ' + loc + title
+    : fmt(startDate) + '-' + fmt(endDate) + ' ' + loc + title;
 }
 
 function toDate(v) {

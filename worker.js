@@ -93,13 +93,15 @@ export default {
       });
 
       const data = await resp.json();
-      const text = data?.content?.[0]?.text ?? JSON.stringify(data);
+      if (!resp.ok) {
+        return new Response(JSON.stringify({ error: { message: data?.error?.message || 'Anthropic API 錯誤' } }), {
+          status: resp.status,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
 
-      return new Response(JSON.stringify({ content: [{ type: 'text', text }] }), {
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        }
+      return new Response(JSON.stringify(data), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
@@ -118,13 +120,15 @@ export default {
     });
 
     const data = await resp.json();
-    const text = data?.content?.[0]?.text ?? JSON.stringify(data);
+    if (!resp.ok) {
+      return new Response(JSON.stringify({ error: { message: data?.error?.message || 'Anthropic API 錯誤' } }), {
+        status: resp.status,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
 
-    return new Response(JSON.stringify({ content: [{ type: 'text', text }] }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      }
+    return new Response(JSON.stringify(data), {
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
   }
 }

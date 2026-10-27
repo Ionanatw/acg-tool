@@ -1,7 +1,7 @@
 // ACG Tool Worker
-// Version: v1.2 (Gemini) — 2026-06-12
+// Version: v1.3 (Gemini → Claude 備援) — 2026-10-27
 // 對應前端 index.html 版本：v1.1-text-image-url
-// 後端改用 Google Gemini API
+// 先用 Google Gemini API；Gemini 失敗（額度用完、限流、當機）時改用 Anthropic Claude
 
 async function fetchUrlText(url) {
   try {
@@ -65,6 +65,58 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
 };
 
+const GEMINI_MODEL = 'gemini-2.5-flash';
+const CLAUDE_MODEL = 'claude-opus-5-5';
+
+async function callGemini(apiKey, system, messages, maxTokens) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: convertToGeminiContents(messages),
+      systemInstruction: { parts: [{ text: system }] },
+      generationConfig: { maxOutputTokens: maxTokens },
+    }),
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} ${data?.error?.message || ''}`.trim());
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  if (!text) throw new Error('回傳內容是空的');
+  return text;
+}
+
+// 前端送來的 messages 本來就是 Anthropic 格式，直接轉送
+async function callClaude(apiKey, system, messages, maxTokens) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: Math.max(maxTokens, 8000),
+      output_config: { effort: 'low' },
+      system,
+      messages,
+    }),
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} ${data?.error?.message || ''}`.trim());
+  if (data.stop_reason === 'refusal') throw new Error('模型拒絕回答');
+  const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+  if (!text) throw new Error(`回傳內容是空的（stop_reason: ${data.stop_reason}）`);
+  return text;
+}
+
+function okResponse(text, provider) {
+  return new Response(JSON.stringify({ content: [{ type: 'text', text }], provider }), {
+    headers: CORS_HEADERS,
+  });
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') {
@@ -78,23 +130,13 @@ export default {
     }
 
     if (request.method === 'GET') {
-      return new Response(JSON.stringify({ status: 'ok', version: 'v1.2-gemini' }), {
+      return new Response(JSON.stringify({ status: 'ok', version: 'v1.3-gemini-claude' }), {
         headers: CORS_HEADERS,
       });
     }
 
     const bodyText = await request.text();
     const body = JSON.parse(bodyText);
-    const apiKey = env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: { message: 'GEMINI_API_KEY 未設定' } }), {
-        status: 500, headers: CORS_HEADERS,
-      });
-    }
-
-    const model = 'gemini-2.5-flash';
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     let userMessages;
 
@@ -110,41 +152,31 @@ export default {
       userMessages = body.messages || [];
     }
 
-    const geminiBody = {
-      contents: convertToGeminiContents(userMessages),
-      systemInstruction: {
-        parts: [{ text: body.system || '' }]
-      },
-      generationConfig: {
-        maxOutputTokens: body.max_tokens || 2000,
-      },
-    };
+    const system = body.system || '';
+    const maxTokens = body.max_tokens || 2000;
+    const errors = [];
 
-    try {
-      const resp = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(geminiBody),
-      });
-
-      const data = await resp.json();
-
-      if (!resp.ok) {
-        const errMsg = data?.error?.message || 'Gemini API 錯誤';
-        return new Response(JSON.stringify({ error: { message: errMsg } }), {
-          status: resp.status, headers: CORS_HEADERS,
-        });
+    if (env.GEMINI_API_KEY) {
+      try {
+        const text = await callGemini(env.GEMINI_API_KEY, system, userMessages, maxTokens);
+        return okResponse(text, 'gemini');
+      } catch (e) {
+        errors.push(`Gemini：${e.message}`);
       }
-
-      // 將 Gemini 回應轉換成前端期望的 Anthropic 格式
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      return new Response(JSON.stringify({ content: [{ type: 'text', text }] }), {
-        headers: CORS_HEADERS,
-      });
-    } catch (e) {
-      return new Response(JSON.stringify({ error: { message: 'Worker 錯誤：' + e.message } }), {
-        status: 500, headers: CORS_HEADERS,
-      });
     }
+
+    if (env.ANTHROPIC_API_KEY) {
+      try {
+        const text = await callClaude(env.ANTHROPIC_API_KEY, system, userMessages, maxTokens);
+        return okResponse(text, 'claude');
+      } catch (e) {
+        errors.push(`Claude：${e.message}`);
+      }
+    }
+
+    if (errors.length === 0) errors.push('GEMINI_API_KEY 與 ANTHROPIC_API_KEY 都未設定');
+    return new Response(JSON.stringify({ error: { message: 'AI 服務都無法使用 — ' + errors.join('｜') } }), {
+      status: 502, headers: CORS_HEADERS,
+    });
   }
 }

@@ -8,12 +8,32 @@
   - 只用 Claude（`claude-sonnet-5-5`，effort low；2026-11-23 起，之前是 `claude-opus-5-5`）。2026-10-28 使用者決定不再用 Gemini。
   - ⚠️ 這個工具靠 Anthropic **預付額度**，歸零就整個停（11/23 就是）。海巡等 sns-data 腳本疑似共用同一個帳戶，見第03輪。
   - Secret：`ANTHROPIC_API_KEY`（不寫進 repo）。Worker 上還留著沒在用的 `GEMINI_API_KEY`。
+  - 用量保護（v1.6 起）：POST 沒有驗證、網址在公開頁面上，所以 Worker 自己設上限——輸出固定 8000 token（呼叫端不能拉高）、body ≤ 8MB、網址 ≤ 10 個、messages ≤ 4 則。頁面正常用法（1 則訊息、max_tokens 2000）不受影響；要放寬請改 `worker.js` 開頭的 `MAX_*` 常數。
 - **部署 Worker**：在 repo 根目錄 `wrangler deploy`。
   - 坑：如果用過 `wrangler versions upload`（預覽版）而沒上線，`wrangler secret put` 會被拒絕（最新版本不是正式版本）。改用 `wrangler versions secret put <名稱>` 建新版本，再 `wrangler versions deploy <版本ID>@100% --yes`。
   - 換金鑰：用 osascript 隱藏輸入視窗收金鑰，直接 pipe 給 wrangler，對話裡不出現金鑰。
 - **驗收方式**：GET Worker 網址看 `version`；用 Playwright 開本機 `index.html`，貼活動文字按「AI 解析活動資訊」，看到「✅ 解析完成」。不要按寫入，免得 Sheet 多測試資料。
 
 ## 各輪紀錄
+
+### 2026-11-23 第04輪：Worker 加用量保護（v1.6）
+
+**做了什麼**
+- 起因：查 Anthropic 額度被燒的來源時發現這支 Worker 的 POST 沒有任何驗證，`system`、`messages`、`max_tokens` 全由呼叫端決定（舊版 `Math.max(maxTokens, 8000)` 只設下限、不設上限），而網址寫在公開頁面裡。補額度後任何人都能花這個帳戶的額度。
+- `worker.js` v1.6：輸出固定 `MAX_OUTPUT_TOKENS = 8000`、body 上限 8MB（含 `content-length` 預檢）、網址 ≤ 10、messages ≤ 4；壞 JSON／非物件回 400，不再丟未處理例外。頁面正常用法不受影響（1 則訊息、max_tokens 2000、近 30 天每天約 10–80 次請求）。
+- 沒動：金鑰、模型（`claude-sonnet-5-5`）、`index.html`。
+
+**驗證證據**
+- 假 `fetch` 的本機測試 15 項，新版 15/15 通過；同一組對舊版（`origin/main`）跑，保護類 8 項失敗（`max_tokens=999999` 被原樣轉送、9MB body 放行、11 個網址放行、壞 JSON 丟例外），確認測試抓得出差異。測試腳本沒進 repo。
+- 回滾點：部署前線上版本是 `7c2db2f1`（v1.5-claude，Sonnet 5.5）；更早的 `90644649`（v1.4，Opus 5.5）。
+- 上線與否以 GET 回 `v1.6-claude` 為準。
+
+**還沒做**
+- 補額度後驗：文字／圖片／網址各一次真實解析（額度是 0，這輪打不出去，不要按寫入）。
+- 更強的保護（沒做）：Worker 內固定 `system` 提示詞、加共用金鑰、或 Cloudflare Rate Limiting。
+
+**等使用者決定的事**
+- 要不要做更強的保護。建議：先不做；Console 的月支出上限是第二道，現在的上限已擋掉「拉高輸出／塞超大輸入」這兩種最貴的用法。
 
 ### 2026-11-23 第03輪：AI 解析又停了（Anthropic 額度歸零）→ 模型降到 Sonnet 5.5
 

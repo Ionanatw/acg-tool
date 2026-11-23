@@ -1,5 +1,5 @@
 // ACG Tool Worker
-// Version: v1.7 (2026-12-01 前優先 Gemini，之後自動回 Claude Sonnet 5.5) — 2026-11-23
+// Version: v1.7.1 (2026-12-01 前優先 Gemini，之後自動回 Claude Sonnet 5.5；Gemini 每個模型 20 秒逾時) — 2026-11-23
 // 對應前端 index.html 版本：v1.1-text-image-url
 // 後端：2026-12-01 00:00（台北）前先用個人 Gemini key（Interactions API），失敗再退 Claude；
 // 到期後只用 Anthropic Claude，不需要任何人手動切換（日期寫死在 GEMINI_UNTIL_MS）。
@@ -84,6 +84,8 @@ async function callClaude(apiKey, system, messages) {
 // ---- Gemini（Interactions API；generateContent 對新 key 已不開放）----
 // 依序嘗試：2026-11-23 實測 3.8-flash 會回 503「高需求」（暫時性），lite 較弱但比整個失敗好
 const GEMINI_MODELS = ['gemini-3.8-flash', 'gemini-3.5-flash-lite'];
+// 每個模型最多等這麼久：2026-11-23 實測 3.8-flash 過載時會卡住超過 2 分鐘，沒有逾時就退不到下一個模型
+const GEMINI_TIMEOUT_MS = 20000;
 // 2026-12-01 00:00 台北時間起不再用 Gemini（11 月用個人 key，12 月起回 Claude）
 const GEMINI_UNTIL_MS = Date.parse('2026-12-01T00:00:00+08:00');
 
@@ -125,6 +127,7 @@ async function callGeminiModel(apiKey, model, system, messages) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
   });
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(`HTTP ${resp.status} ${data?.error?.message || ''}`.trim());
@@ -173,7 +176,7 @@ export default {
       // provider＝「此刻」會優先用誰；12/1 驗證只要看這個欄位是不是 claude
       return new Response(JSON.stringify({
         status: 'ok',
-        version: 'v1.7-gemini-until-1201',
+        version: 'v1.7.1-gemini-until-1201',
         provider: geminiActive(env) ? 'gemini' : 'claude',
       }), { headers: CORS_HEADERS });
     }

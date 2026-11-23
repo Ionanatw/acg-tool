@@ -80,7 +80,7 @@ test('GET 的 provider 欄位跟著日期變（12/1 驗證用）', async () => {
   await withFakes({ now: BEFORE_CUTOFF, handlers: {} }, async () => {
     const d = await (await get(KEYS)).json();
     assert.equal(d.provider, 'gemini');
-    assert.match(d.version, /^v1\.7/);
+    assert.match(d.version, /^v1\.8/);
   });
   await withFakes({ now: AT_CUTOFF, handlers: {} }, async () => {
     assert.equal((await (await get(KEYS)).json()).provider, 'claude');
@@ -213,5 +213,56 @@ test('用量保護：Claude 路徑輸出上限固定 8000', async () => {
     await post(ONE_MSG, KEYS);
     assert.equal(calls[0].body.max_tokens, 8000);
     assert.equal(calls[0].body.model, 'claude-sonnet-5-5');
+  });
+});
+
+// ---- 用量紀錄（v1.8）----
+async function captureLogs(fn) {
+  const real = console.log, lines = [];
+  console.log = (...a) => lines.push(a.join(' '));
+  try { await fn(); } finally { console.log = real; }
+  return lines.filter(l => l.includes('"acg_parse"')).map(l => JSON.parse(l));
+}
+
+test('用量紀錄：Gemini 成功時回應與 log 都帶 provider／model／usage，log 不含使用者輸入', async () => {
+  const usage = { total_input_tokens: 120, total_output_tokens: 45 };
+  await withFakes({ now: BEFORE_CUTOFF, handlers: {
+    [GEMINI_URL]: (call) => call.body.model === 'gemini-3.8-flash'
+      ? { status: 503, json: { error: { message: 'high demand' } } }
+      : { json: { steps: [{ type: 'model_output', content: [{ type: 'text', text: 'OK' }] }], usage } } } }, async () => {
+    let data;
+    const logs = await captureLogs(async () => { data = await (await post(ONE_MSG, KEYS)).json(); });
+    assert.deepEqual(data.usage, usage);
+    assert.equal(logs.length, 1);
+    assert.equal(logs[0].ok, true);
+    assert.equal(logs[0].provider, 'gemini');
+    assert.equal(logs[0].model, 'gemini-3.5-flash-lite');
+    assert.deepEqual(logs[0].usage, usage);
+    assert.equal(logs[0].errors.length, 1); // 3.8-flash 失敗原因也記下
+    assert.ok(!JSON.stringify(logs[0]).includes('活動 A'));
+  });
+});
+
+test('用量紀錄：Claude 路徑記 Anthropic 的 usage', async () => {
+  const usage = { input_tokens: 300, output_tokens: 80 };
+  await withFakes({ now: AT_CUTOFF, handlers: {
+    [CLAUDE_URL]: { json: { content: [{ type: 'text', text: 'C' }], stop_reason: 'end_turn', usage } } } }, async () => {
+    let data;
+    const logs = await captureLogs(async () => { data = await (await post(ONE_MSG, KEYS)).json(); });
+    assert.equal(data.model, 'claude-sonnet-5-5');
+    assert.deepEqual(data.usage, usage);
+    assert.equal(logs[0].provider, 'claude');
+    assert.deepEqual(logs[0].usage, usage);
+  });
+});
+
+test('用量紀錄：兩邊都失敗也留一行 ok:false', async () => {
+  await withFakes({ now: BEFORE_CUTOFF, handlers: {
+    [GEMINI_URL]: { status: 402, json: { error: { message: 'quota' } } },
+    [CLAUDE_URL]: { status: 400, json: { error: { message: 'credit' } } } } }, async () => {
+    const logs = await captureLogs(async () => { await post(ONE_MSG, KEYS); });
+    assert.equal(logs.length, 1);
+    assert.equal(logs[0].ok, false);
+    assert.equal(logs[0].errors.length, 2);
   });
 });

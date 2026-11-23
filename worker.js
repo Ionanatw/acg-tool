@@ -78,7 +78,7 @@ async function callClaude(apiKey, system, messages) {
   if (data.stop_reason === 'refusal') throw new Error('模型拒絕回答');
   const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
   if (!text) throw new Error(`回傳內容是空的（stop_reason: ${data.stop_reason}）`);
-  return text;
+  return { text, usage: data.usage ?? null };
 }
 
 // ---- Gemini（Interactions API；generateContent 對新 key 已不開放）----
@@ -138,14 +138,15 @@ async function callGeminiModel(apiKey, model, system, messages) {
     .map(c => c.text)
     .join('');
   if (!text) throw new Error('回傳內容是空的');
-  return text;
+  return { text, usage: data.usage ?? null };
 }
 
 async function callGemini(apiKey, system, messages) {
   const errors = [];
   for (const model of GEMINI_MODELS) {
     try {
-      return { text: await callGeminiModel(apiKey, model, system, messages), model };
+      const { text, usage } = await callGeminiModel(apiKey, model, system, messages);
+      return { text, usage, model, skipped: errors };
     } catch (e) {
       errors.push(`${model}：${e.message}`);
     }
@@ -153,11 +154,17 @@ async function callGemini(apiKey, system, messages) {
   throw new Error(errors.join('；'));
 }
 
-// provider／model 讓呼叫端看得出這次實際是誰回答的（前端只讀 content[0].text，多的欄位無影響）
-function okResponse(text, provider, model) {
-  return new Response(JSON.stringify({ content: [{ type: 'text', text }], provider, model }), {
+// provider／model／usage 讓呼叫端看得出這次實際是誰回答、花了多少 token（前端只讀 content[0].text，多的欄位無影響）
+function okResponse(text, provider, model, usage) {
+  return new Response(JSON.stringify({ content: [{ type: 'text', text }], provider, model, usage }), {
     headers: CORS_HEADERS,
   });
+}
+
+// 用量紀錄（v1.8）：每個 POST 一行 JSON，進 Cloudflare Workers Logs（wrangler.toml 開 observability）。
+// 只記用了誰、token 數、耗時與失敗原因，不記使用者輸入的內容。
+function logUsage(entry) {
+  console.log(JSON.stringify({ event: 'acg_parse', ...entry }));
 }
 
 export default {
@@ -176,7 +183,7 @@ export default {
       // provider＝「此刻」會優先用誰；12/1 驗證只要看這個欄位是不是 claude
       return new Response(JSON.stringify({
         status: 'ok',
-        version: 'v1.7.1-gemini-until-1201',
+        version: 'v1.8-usage-log',
         provider: geminiActive(env) ? 'gemini' : 'claude',
       }), { headers: CORS_HEADERS });
     }
@@ -227,19 +234,24 @@ export default {
       });
     }
 
+    const started = Date.now();
+    const mode = body.sourceType === 'url' ? 'url' : 'messages';
     const errors = [];
     for (const provider of providers) {
       try {
         if (provider === 'gemini') {
-          const { text, model } = await callGemini(env.GEMINI_API_KEY, system, userMessages);
-          return okResponse(text, provider, model);
+          const { text, model, usage, skipped } = await callGemini(env.GEMINI_API_KEY, system, userMessages);
+          logUsage({ ok: true, provider, model, usage, mode, ms: Date.now() - started, errors: [...errors, ...skipped] });
+          return okResponse(text, provider, model, usage);
         }
-        const text = await callClaude(env.ANTHROPIC_API_KEY, system, userMessages);
-        return okResponse(text, provider, CLAUDE_MODEL);
+        const { text, usage } = await callClaude(env.ANTHROPIC_API_KEY, system, userMessages);
+        logUsage({ ok: true, provider, model: CLAUDE_MODEL, usage, mode, ms: Date.now() - started, errors });
+        return okResponse(text, provider, CLAUDE_MODEL, usage);
       } catch (e) {
         errors.push(`${provider === 'gemini' ? 'Gemini' : 'Claude'} 錯誤：${e.message}`);
       }
     }
+    logUsage({ ok: false, mode, ms: Date.now() - started, errors });
     return new Response(JSON.stringify({ error: { message: errors.join('｜') } }), {
       status: 502, headers: CORS_HEADERS,
     });

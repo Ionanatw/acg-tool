@@ -1,7 +1,8 @@
 // ACG Tool Worker
-// Version: v1.6 (Claude Sonnet 5.5，加用量保護) — 2026-11-23
+// Version: v1.7 (2026-12-01 前優先 Gemini，之後自動回 Claude Sonnet 5.5) — 2026-11-23
 // 對應前端 index.html 版本：v1.1-text-image-url
-// 後端只用 Anthropic Claude（2026-10-28 起不再用 Gemini）
+// 後端：2026-12-01 00:00（台北）前先用個人 Gemini key（Interactions API），失敗再退 Claude；
+// 到期後只用 Anthropic Claude，不需要任何人手動切換（日期寫死在 GEMINI_UNTIL_MS）。
 
 async function fetchUrlText(url) {
   try {
@@ -80,8 +81,78 @@ async function callClaude(apiKey, system, messages) {
   return text;
 }
 
-function okResponse(text) {
-  return new Response(JSON.stringify({ content: [{ type: 'text', text }] }), {
+// ---- Gemini（Interactions API；generateContent 對新 key 已不開放）----
+// 依序嘗試：2026-11-23 實測 3.8-flash 會回 503「高需求」（暫時性），lite 較弱但比整個失敗好
+const GEMINI_MODELS = ['gemini-3.8-flash', 'gemini-3.5-flash-lite'];
+// 2026-12-01 00:00 台北時間起不再用 Gemini（11 月用個人 key，12 月起回 Claude）
+const GEMINI_UNTIL_MS = Date.parse('2026-12-01T00:00:00+08:00');
+
+function geminiActive(env) {
+  return Boolean(env.GEMINI_API_KEY) && Date.now() < GEMINI_UNTIL_MS;
+}
+
+// Anthropic 格式的 content（字串或 text／image 區塊）→ Gemini 的 content 陣列
+function toGeminiContent(content) {
+  if (typeof content === 'string') return [{ type: 'text', text: content }];
+  const parts = [];
+  for (const block of Array.isArray(content) ? content : []) {
+    if (block.type === 'text') {
+      parts.push({ type: 'text', text: block.text });
+    } else if (block.type === 'image' && block.source?.type === 'base64') {
+      parts.push({ type: 'image', mime_type: block.source.media_type, data: block.source.data });
+    }
+  }
+  return parts;
+}
+
+// 單則訊息直接送 content 陣列；多則用 steps（user_input／model_output）
+function toGeminiInput(messages) {
+  if (messages.length === 1) return toGeminiContent(messages[0].content);
+  return messages.map(m => ({
+    type: m.role === 'assistant' ? 'model_output' : 'user_input',
+    content: toGeminiContent(m.content),
+  }));
+}
+
+async function callGeminiModel(apiKey, model, system, messages) {
+  const body = {
+    model,
+    input: toGeminiInput(messages),
+    generation_config: { max_output_tokens: MAX_OUTPUT_TOKENS, thinking_level: 'low' },
+  };
+  if (system) body.system_instruction = system;
+  const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    body: JSON.stringify(body),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} ${data?.error?.message || ''}`.trim());
+  const text = (data.steps || [])
+    .filter(s => s.type === 'model_output')
+    .flatMap(s => s.content || [])
+    .filter(c => c.type === 'text')
+    .map(c => c.text)
+    .join('');
+  if (!text) throw new Error('回傳內容是空的');
+  return text;
+}
+
+async function callGemini(apiKey, system, messages) {
+  const errors = [];
+  for (const model of GEMINI_MODELS) {
+    try {
+      return { text: await callGeminiModel(apiKey, model, system, messages), model };
+    } catch (e) {
+      errors.push(`${model}：${e.message}`);
+    }
+  }
+  throw new Error(errors.join('；'));
+}
+
+// provider／model 讓呼叫端看得出這次實際是誰回答的（前端只讀 content[0].text，多的欄位無影響）
+function okResponse(text, provider, model) {
+  return new Response(JSON.stringify({ content: [{ type: 'text', text }], provider, model }), {
     headers: CORS_HEADERS,
   });
 }
@@ -99,9 +170,12 @@ export default {
     }
 
     if (request.method === 'GET') {
-      return new Response(JSON.stringify({ status: 'ok', version: 'v1.6-claude' }), {
-        headers: CORS_HEADERS,
-      });
+      // provider＝「此刻」會優先用誰；12/1 驗證只要看這個欄位是不是 claude
+      return new Response(JSON.stringify({
+        status: 'ok',
+        version: 'v1.7-gemini-until-1201',
+        provider: geminiActive(env) ? 'gemini' : 'claude',
+      }), { headers: CORS_HEADERS });
     }
 
     if (Number(request.headers.get('content-length') || 0) > MAX_BODY_BYTES) {
@@ -141,19 +215,30 @@ export default {
 
     const system = body.system || '';
 
-    if (!env.ANTHROPIC_API_KEY) {
+    const providers = [];
+    if (geminiActive(env)) providers.push('gemini');
+    if (env.ANTHROPIC_API_KEY) providers.push('claude');
+    if (providers.length === 0) {
       return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY 未設定' } }), {
         status: 500, headers: CORS_HEADERS,
       });
     }
 
-    try {
-      const text = await callClaude(env.ANTHROPIC_API_KEY, system, userMessages);
-      return okResponse(text);
-    } catch (e) {
-      return new Response(JSON.stringify({ error: { message: 'Claude 錯誤：' + e.message } }), {
-        status: 502, headers: CORS_HEADERS,
-      });
+    const errors = [];
+    for (const provider of providers) {
+      try {
+        if (provider === 'gemini') {
+          const { text, model } = await callGemini(env.GEMINI_API_KEY, system, userMessages);
+          return okResponse(text, provider, model);
+        }
+        const text = await callClaude(env.ANTHROPIC_API_KEY, system, userMessages);
+        return okResponse(text, provider, CLAUDE_MODEL);
+      } catch (e) {
+        errors.push(`${provider === 'gemini' ? 'Gemini' : 'Claude'} 錯誤：${e.message}`);
+      }
     }
+    return new Response(JSON.stringify({ error: { message: errors.join('｜') } }), {
+      status: 502, headers: CORS_HEADERS,
+    });
   }
 }

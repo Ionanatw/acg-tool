@@ -93,6 +93,35 @@ function geminiActive(env) {
   return Boolean(env.GEMINI_API_KEY) && Date.now() < GEMINI_UNTIL_MS;
 }
 
+// 12/1 起 Claude 為主；Claude 失敗（例如額度用完）就改用 Gemini 備援並通知鴿王（2026-11-23 鴿王指示）。
+// 12/1 前維持 Gemini 優先、Claude 備援。
+function providerOrder(env) {
+  if (geminiActive(env)) return env.ANTHROPIC_API_KEY ? ['gemini', 'claude'] : ['gemini'];
+  const order = [];
+  if (env.ANTHROPIC_API_KEY) order.push('claude');
+  if (env.GEMINI_API_KEY) order.push('gemini');
+  return order;
+}
+
+// 備援通知：同一個 Worker 節點 6 小時內只發一次，避免每筆請求都響
+const ALERT_EVERY_MS = 6 * 60 * 60 * 1000;
+async function alertFallback(env, claudeError) {
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return 'no-telegram';
+  const cache = globalThis.caches?.default;
+  const key = new Request('https://acg-alert.internal/claude-fallback');
+  if (cache && await cache.match(key)) return 'throttled';
+  const text = `🟠 ACG 小幫手：Claude 失敗，已改用 Gemini 備援\n原因：${claudeError.slice(0, 300)}\n額度用完就到 Console 補；6 小時內不再重複通知`;
+  const resp = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text }),
+  }).catch(e => ({ ok: false, statusText: e.message }));
+  if (resp.ok && cache) {
+    await cache.put(key, new Response('1', { headers: { 'Cache-Control': `max-age=${ALERT_EVERY_MS / 1000}` } }));
+  }
+  return resp.ok ? 'sent' : 'failed';
+}
+
 // Anthropic 格式的 content（字串或 text／image 區塊）→ Gemini 的 content 陣列
 function toGeminiContent(content) {
   if (typeof content === 'string') return [{ type: 'text', text: content }];
@@ -168,7 +197,7 @@ function logUsage(entry) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         headers: {
@@ -181,10 +210,12 @@ export default {
 
     if (request.method === 'GET') {
       // provider＝「此刻」會優先用誰；12/1 驗證只要看這個欄位是不是 claude
+      const order = providerOrder(env);
       return new Response(JSON.stringify({
         status: 'ok',
-        version: 'v1.8-usage-log',
-        provider: geminiActive(env) ? 'gemini' : 'claude',
+        version: 'v1.9-gemini-backup',
+        provider: order[0] || null,
+        fallback: order[1] || null,
       }), { headers: CORS_HEADERS });
     }
 
@@ -225,9 +256,7 @@ export default {
 
     const system = body.system || '';
 
-    const providers = [];
-    if (geminiActive(env)) providers.push('gemini');
-    if (env.ANTHROPIC_API_KEY) providers.push('claude');
+    const providers = providerOrder(env);
     if (providers.length === 0) {
       return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY 未設定' } }), {
         status: 500, headers: CORS_HEADERS,
@@ -241,6 +270,11 @@ export default {
       try {
         if (provider === 'gemini') {
           const { text, model, usage, skipped } = await callGemini(env.GEMINI_API_KEY, system, userMessages);
+          if (providers[0] === 'claude') {
+            // Claude 是主力卻失敗 → 這筆靠備援回答，通知鴿王（不拖慢回應）
+            const alerting = alertFallback(env, errors.join('｜')).catch(() => 'failed');
+            if (ctx?.waitUntil) ctx.waitUntil(alerting); else await alerting;
+          }
           logUsage({ ok: true, provider, model, usage, mode, ms: Date.now() - started, errors: [...errors, ...skipped] });
           return okResponse(text, provider, model, usage);
         }

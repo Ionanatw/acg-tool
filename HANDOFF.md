@@ -22,11 +22,12 @@
 
 **做了什麼**
 - 使用者決定 11 月用個人 Gemini key、12 月起用 Claude。`worker.js` v1.7：`GEMINI_UNTIL_MS`（2026-12-01 00:00 +08:00）前先走 Gemini Interactions API（`POST /v1beta/interactions`，標頭 `x-goog-api-key`，`system_instruction`、`generation_config.max_output_tokens`／`thinking_level: low`；圖片轉成 `{type:'image', mime_type, data}`，回應取 `steps[]` 中 `model_output` 的 text），模型依序 `gemini-3.8-flash`、`gemini-3.5-flash-lite`（實測 3.8-flash 會回 503「高需求」）；Gemini 全失敗才退 Claude；到期後不再呼叫 Gemini。沿用 v1.6 的 `MAX_*` 上限。
-- 新增 `test/worker.test.mjs`（13 項）。
+- v1.7.1 補丁：Gemini 每個模型最多等 20 秒（`GEMINI_TIMEOUT_MS`），逾時就退下一個模型。起因：上線後實測 `gemini-3.8-flash` 過載時會卡住超過 2 分鐘，沒有逾時就退不到 lite，頁面會一直轉。
+- 新增 `test/worker.test.mjs`（15 項）。
 - 沒動：`index.html`、`ANTHROPIC_API_KEY`、Claude 路徑。
 
 **驗證證據**
-- `node --test` 13/13；同一組對 v1.6 的 `worker.js` 跑 3/13（只有保留下來的用量保護與無金鑰兩類通過），確認測試抓得出差異。含 12/1 00:00 整點邊界（前 1 毫秒走 Gemini、整點走 Claude）。
+- `node --test` 15/15（v1.7 初版 13 項＋逾時 2 項）；v1.7 初版同一組對 v1.6 的 `worker.js` 跑 3/13（只有保留下來的用量保護與無金鑰兩類通過），確認測試抓得出差異。含 12/1 00:00 整點邊界（前 1 毫秒走 Gemini、整點走 Claude）。
 - 個人 key 直打 Interactions API：`gemini-3.5-flash-lite` 文字、圖片輸入都 200，`thinking_level` 的 `low`、`minimal` 都被接受。`gemini-3.8-flash`、`gemini-flash-latest`、`gemini-4-hydrogen` 當下回 503（高需求，暫時性）。
 
 **還沒做／要追蹤**

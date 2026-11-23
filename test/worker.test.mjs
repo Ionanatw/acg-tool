@@ -14,12 +14,13 @@ async function withFakes({ now, handlers }, fn) {
   const realFetch = globalThis.fetch, realNow = Date.now;
   const calls = [];
   globalThis.fetch = async (url, init = {}) => {
-    const call = { url, headers: init.headers || {}, body: init.body ? JSON.parse(init.body) : null };
+    const call = { url, headers: init.headers || {}, body: init.body ? JSON.parse(init.body) : null, signal: init.signal };
     calls.push(call);
     const h = handlers[url];
     if (!h) throw new Error('沒預期的呼叫：' + url);
-    const { status = 200, json } = typeof h === 'function' ? h(call) : h;
-    return new Response(JSON.stringify(json), { status });
+    const r = await (typeof h === 'function' ? h(call) : h);
+    if (r.throws) throw r.throws; // 模擬逾時、斷線等 fetch 本身失敗
+    return new Response(JSON.stringify(r.json), { status: r.status ?? 200 });
   };
   Date.now = () => now;
   try { return await fn(calls); } finally { globalThis.fetch = realFetch; Date.now = realNow; }
@@ -87,6 +88,35 @@ test('GET 的 provider 欄位跟著日期變（12/1 驗證用）', async () => {
   await withFakes({ now: BEFORE_CUTOFF, handlers: {} }, async () => { // 沒設 Gemini key 也是 claude
     assert.equal((await (await get({ ANTHROPIC_API_KEY: 'a' })).json()).provider, 'claude');
   });
+});
+
+test('Gemini 主模型逾時（fetch 丟 TimeoutError）→ 退 flash-lite；每次 Gemini 呼叫都帶逾時 signal', async () => {
+  await withFakes({ now: BEFORE_CUTOFF, handlers: {
+    [GEMINI_URL]: (call) => call.body.model === 'gemini-3.8-flash'
+      ? { throws: new DOMException('The operation timed out.', 'TimeoutError') }
+      : geminiOk('LITE 答案') } }, async (calls) => {
+    const data = await (await post(ONE_MSG, KEYS)).json();
+    assert.equal(data.model, 'gemini-3.5-flash-lite');
+    assert.equal(data.content[0].text, 'LITE 答案');
+    assert.ok(calls.every(c => c.signal instanceof AbortSignal), '每次 Gemini 呼叫都要有逾時 signal');
+  });
+});
+
+test('真的卡住：Gemini 呼叫沒回應時被 signal 中止，並退下一個模型', async () => {
+  const realTimeout = AbortSignal.timeout;
+  AbortSignal.timeout = () => AbortSignal.abort(new DOMException('timed out', 'TimeoutError')); // 把 20 秒縮成立刻到期
+  try {
+    await withFakes({ now: BEFORE_CUTOFF, handlers: {
+      [GEMINI_URL]: (call) => call.body.model === 'gemini-3.8-flash'
+        ? new Promise((_, reject) => {
+            if (call.signal.aborted) return reject(call.signal.reason); // 真 fetch 也是：signal 已中止就立刻失敗
+            call.signal.addEventListener('abort', () => reject(call.signal.reason));
+          })
+        : geminiOk('LITE 答案') } }, async () => {
+      const data = await (await post(ONE_MSG, KEYS)).json();
+      assert.equal(data.model, 'gemini-3.5-flash-lite');
+    });
+  } finally { AbortSignal.timeout = realTimeout; }
 });
 
 test('Gemini 失敗（HTTP 402）→ 退 Claude', async () => {

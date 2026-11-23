@@ -80,7 +80,7 @@ test('GET 的 provider 欄位跟著日期變（12/1 驗證用）', async () => {
   await withFakes({ now: BEFORE_CUTOFF, handlers: {} }, async () => {
     const d = await (await get(KEYS)).json();
     assert.equal(d.provider, 'gemini');
-    assert.match(d.version, /^v1\.8/);
+    assert.match(d.version, /^v1\.9/);
   });
   await withFakes({ now: AT_CUTOFF, handlers: {} }, async () => {
     assert.equal((await (await get(KEYS)).json()).provider, 'claude');
@@ -150,14 +150,12 @@ test('Gemini 回空內容 → 當失敗退 Claude', async () => {
   });
 });
 
-test('只有 Gemini key（沒設 Claude）→ 12/1 前能用、12/1 後 500', async () => {
+test('只有 Gemini key（沒設 Claude）→ 12/1 前後都能用（12/1 後 Gemini 留作備援）', async () => {
   await withFakes({ now: BEFORE_CUTOFF, handlers: { [GEMINI_URL]: geminiOk('ok') } }, async () => {
     assert.equal((await post(ONE_MSG, { GEMINI_API_KEY: 'g' })).status, 200);
   });
-  await withFakes({ now: AT_CUTOFF, handlers: {} }, async (calls) => {
-    const resp = await post(ONE_MSG, { GEMINI_API_KEY: 'g' });
-    assert.equal(resp.status, 500);
-    assert.equal(calls.length, 0);
+  await withFakes({ now: AT_CUTOFF, handlers: { [GEMINI_URL]: geminiOk('ok') } }, async () => {
+    assert.equal((await post(ONE_MSG, { GEMINI_API_KEY: 'g' })).status, 200);
   });
 });
 
@@ -264,5 +262,54 @@ test('用量紀錄：兩邊都失敗也留一行 ok:false', async () => {
     assert.equal(logs.length, 1);
     assert.equal(logs[0].ok, false);
     assert.equal(logs[0].errors.length, 2);
+  });
+});
+
+// ---- 12/1 後 Claude 失敗 → Gemini 備援＋Telegram 通知（v1.9）----
+const TG_URL = 'https://api.telegram.org/botT/sendMessage';
+const TG_KEYS = { ...KEYS, TELEGRAM_BOT_TOKEN: 'T', TELEGRAM_CHAT_ID: '42' };
+function fakeCaches() {
+  const store = new Map();
+  return { default: { match: async (r) => store.get(r.url), put: async (r, v) => { store.set(r.url, v); } } };
+}
+
+test('12/1 後 Claude 額度用完 → Gemini 回答，Telegram 通知一次，第二筆不重複通知', async () => {
+  const realCaches = globalThis.caches;
+  globalThis.caches = fakeCaches();
+  try {
+    await withFakes({ now: AT_CUTOFF, handlers: {
+      [CLAUDE_URL]: { status: 400, json: { error: { message: 'Your credit balance is too low' } } },
+      [GEMINI_URL]: geminiOk('GEMINI 備援'),
+      [TG_URL]: { json: { ok: true } } } }, async (calls) => {
+      const data = await (await post(ONE_MSG, TG_KEYS)).json();
+      assert.equal(data.provider, 'gemini');
+      assert.equal(data.content[0].text, 'GEMINI 備援');
+      const tg = calls.filter(c => c.url === TG_URL);
+      assert.equal(tg.length, 1);
+      assert.equal(tg[0].body.chat_id, '42');
+      assert.match(tg[0].body.text, /credit balance is too low/);
+      await post(ONE_MSG, TG_KEYS);
+      assert.equal(calls.filter(c => c.url === TG_URL).length, 1); // 6 小時內不重發
+    });
+  } finally { globalThis.caches = realCaches; }
+});
+
+test('12/1 前 Gemini 失敗退 Claude 不發通知；12/1 後 Claude 正常也不發', async () => {
+  await withFakes({ now: BEFORE_CUTOFF, handlers: {
+    [GEMINI_URL]: { status: 503, json: {} }, [CLAUDE_URL]: claudeOk('C') } }, async (calls) => {
+    await post(ONE_MSG, TG_KEYS);
+    assert.ok(!calls.some(c => c.url === TG_URL));
+  });
+  await withFakes({ now: AT_CUTOFF, handlers: { [CLAUDE_URL]: claudeOk('C') } }, async (calls) => {
+    await post(ONE_MSG, TG_KEYS);
+    assert.ok(!calls.some(c => c.url === TG_URL));
+  });
+});
+
+test('GET：12/1 後主力 claude、備援 gemini', async () => {
+  await withFakes({ now: AT_CUTOFF, handlers: {} }, async () => {
+    const d = await (await get(KEYS)).json();
+    assert.equal(d.provider, 'claude');
+    assert.equal(d.fallback, 'gemini');
   });
 });

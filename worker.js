@@ -1,5 +1,5 @@
 // ACG Tool Worker
-// Version: v1.5 (Claude Sonnet 5.5) — 2026-11-23
+// Version: v1.6 (Claude Sonnet 5.5，加用量保護) — 2026-11-23
 // 對應前端 index.html 版本：v1.1-text-image-url
 // 後端只用 Anthropic Claude（2026-10-28 起不再用 Gemini）
 
@@ -41,8 +41,22 @@ const CORS_HEADERS = {
 
 const CLAUDE_MODEL = 'claude-sonnet-5-5';
 
+// 用量保護（2026-11-23）：這支 Worker 的 POST 沒有驗證，網址又寫在公開頁面裡，
+// 任何人都能指定 max_tokens 和一大包輸入來花額度。下面的上限對頁面的正常使用沒有影響：
+// 頁面只送 1 則 user 訊息、max_tokens 2000（Worker 本來就墊到 8000）、網址一行一個。
+const MAX_OUTPUT_TOKENS = 8000;          // 呼叫端不能自己拉高
+const MAX_BODY_BYTES = 8 * 1024 * 1024;  // Anthropic 單張圖上限 5MB，base64 後約 6.7MB
+const MAX_URLS = 10;
+const MAX_MESSAGES = 4;
+
+function errorResponse(status, message) {
+  return new Response(JSON.stringify({ error: { message } }), {
+    status, headers: CORS_HEADERS,
+  });
+}
+
 // 前端送來的 messages 本來就是 Anthropic 格式，直接轉送
-async function callClaude(apiKey, system, messages, maxTokens) {
+async function callClaude(apiKey, system, messages) {
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -52,7 +66,7 @@ async function callClaude(apiKey, system, messages, maxTokens) {
     },
     body: JSON.stringify({
       model: CLAUDE_MODEL,
-      max_tokens: Math.max(maxTokens, 8000),
+      max_tokens: MAX_OUTPUT_TOKENS,
       output_config: { effort: 'low' },
       system,
       messages,
@@ -85,18 +99,32 @@ export default {
     }
 
     if (request.method === 'GET') {
-      return new Response(JSON.stringify({ status: 'ok', version: 'v1.5-claude' }), {
+      return new Response(JSON.stringify({ status: 'ok', version: 'v1.6-claude' }), {
         headers: CORS_HEADERS,
       });
     }
 
+    if (Number(request.headers.get('content-length') || 0) > MAX_BODY_BYTES) {
+      return errorResponse(413, '請求太大');
+    }
     const bodyText = await request.text();
-    const body = JSON.parse(bodyText);
+    if (bodyText.length > MAX_BODY_BYTES) return errorResponse(413, '請求太大');
+
+    let body;
+    try {
+      body = JSON.parse(bodyText);
+    } catch (e) {
+      return errorResponse(400, '請求格式錯誤');
+    }
+    if (!body || typeof body !== 'object') return errorResponse(400, '請求格式錯誤');
 
     let userMessages;
 
     // URL 模式：先抓取網址內容
     if (body.sourceType === 'url' && Array.isArray(body.urls) && body.urls.length > 0) {
+      if (body.urls.length > MAX_URLS) {
+        return errorResponse(400, `一次最多 ${MAX_URLS} 個網址`);
+      }
       const fetchedTexts = await Promise.all(body.urls.map(fetchUrlText));
       const combinedText = fetchedTexts.join('\n\n---\n\n');
       userMessages = [{
@@ -107,8 +135,11 @@ export default {
       userMessages = body.messages || [];
     }
 
+    if (!Array.isArray(userMessages) || userMessages.length > MAX_MESSAGES) {
+      return errorResponse(400, '請求格式錯誤');
+    }
+
     const system = body.system || '';
-    const maxTokens = body.max_tokens || 2000;
 
     if (!env.ANTHROPIC_API_KEY) {
       return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY 未設定' } }), {
@@ -117,7 +148,7 @@ export default {
     }
 
     try {
-      const text = await callClaude(env.ANTHROPIC_API_KEY, system, userMessages, maxTokens);
+      const text = await callClaude(env.ANTHROPIC_API_KEY, system, userMessages);
       return okResponse(text);
     } catch (e) {
       return new Response(JSON.stringify({ error: { message: 'Claude 錯誤：' + e.message } }), {

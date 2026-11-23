@@ -1,5 +1,5 @@
 // ACG Tool Worker
-// Version: v1.4 (Claude) — 2026-10-28
+// Version: v1.5 (Claude Sonnet 5.5) — 2026-11-23
 // 對應前端 index.html 版本：v1.1-text-image-url
 // 後端只用 Anthropic Claude（2026-10-28 起不再用 Gemini）
 
@@ -39,7 +39,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
 };
 
-const CLAUDE_MODEL = 'claude-opus-5-5';
+const CLAUDE_MODEL = 'claude-sonnet-5-5';
 
 // 前端送來的 messages 本來就是 Anthropic 格式，直接轉送
 async function callClaude(apiKey, system, messages, maxTokens) {
@@ -85,7 +85,7 @@ export default {
     }
 
     if (request.method === 'GET') {
-      return new Response(JSON.stringify({ status: 'ok', version: 'v1.4-claude' }), {
+      return new Response(JSON.stringify({ status: 'ok', version: 'v1.5-claude' }), {
         headers: CORS_HEADERS,
       });
     }

@@ -1,3 +1,7 @@
 name = "patient-snowflake-50b3acg"
 main = "worker.js"
 compatibility_date = "2026-06-12"
+
+# 用量紀錄（v1.8）：worker.js 的 logUsage 每個 POST 印一行，Cloudflare 儀表板 Workers Logs 看得到
+[observability]
+enabled = true
